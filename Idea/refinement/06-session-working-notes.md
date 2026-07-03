@@ -41,6 +41,22 @@ All checks run ~05:00–05:30 Fri 3 Jul against live services using the local `.
 - Site has **one human user** (Taha). Two-principal demo options: (a) invite a second free agent seat (JSM Free allows up to 3 agents) — 15 min human task; (b) flip the single account between roles; (c) model the second principal as an agent identity. Option (a) recommended for visual clarity; (b) is the zero-dependency fallback.
 - `MEDIA-1` test issue creation was already verified per CLAUDE-AVAILABLE-APIS.md (not re-run).
 
+### 1.2b Jira STANDARD upgrade — verified live (3 Jul, ~08:00, after the user provisioned it)
+
+- `GET /rest/api/3/instance/license` → **`PAID`** (both `jira-servicedesk` and `jira-customer-service`). The Free-tier enforcement caveat in §1.2 is **superseded**.
+- **Grant flip on the LIVE assigned scheme 10000 verified** (add 201 → delete 204) — the real demo mechanic, not just a scratch scheme.
+- **Issue security (Standard-only feature) created, associated, and enforcement-proven:**
+  - Scheme **"Precedent Restricted Runbooks" = 10000**, associated with MEDIA; levels **"Rights Ops Only" = 10000** (member: role 10007) and **"Scheduling Ops Only" = 10001** (member: role 10008); IDs in `.env`.
+  - Set/unset `security` on an issue via API: 204 both ways; `SET_ISSUE_SECURITY` already granted to admins.
+  - **Timed enforcement test on MEDIA-1**: with the level set, removing the principal from role 10007 → Jira returns **404 within ≤5 s** (stable at 15/30/60 s); re-adding the role restores 200; baseline fully restored after the test. (A first read at ~1 s returned 200 — permission-cache lag; the measured propagation window is seconds, consistent with our stated 2–3 s poll-tick consistency model. Quote "≤5 s Jira-side + ≤3 s poll tick ⇒ flip→dark ≤8 s worst case".)
+- **Jira audit records API works** (`GET /rest/api/3/auditing/record`): 593 records; permission-scheme and role events with millisecond timestamps — adopted as the **independent external clock** for the drift/TTC bench and as audit corroboration ("the ACL source's own regulator-grade log cross-references ours").
+
+| # | Time | Decision | Reason |
+|---|---|---|---|
+| D8 | 08:05 | Jira tier caveat retired; consistency window restated with measured numbers (≤5 s Jira-side propagation) | §1.2b live tests |
+| D9 | 08:10 | **ADOPT (Tier A1, net +0.5 ph):** restricted KB runbooks get their ACL from **real Jira issue security** — each restricted article (KB #4/#5) is mirrored/linked as a MEDIA "runbook" issue carrying the "Rights Ops Only" level; `sync.py` polls the `security` field on the same 2–3 s tick (replaces the planned sim-side "KB restriction fields" source, −0.5 ph). The 04 script line "flips the article's restriction in Jira" becomes literally true; the RESTRICT demo becomes **dual-enforcement** (Jira 404 + Precedent deny, two audit logs) | §1.2b; makes an existing script claim real; BasedAI differentiation |
+| D10 | 08:10 | ADOPT (free): drift/TTC bench timestamps cross-referenced against Jira's auditing API; README audit-posture line added | §1.2b |
+
 ### 1.3 ASI:One + Agentverse
 
 - ASI:One chat completions: live request succeeded (model `asi1` replied). Key verified.
@@ -151,6 +167,7 @@ Residual live-rule risks: (a) BasedAI prize split ($2k/$1k/$500/HMs) appears onl
 - Baseline 52.0 (after this session's −3.0 verified savings, incl. UCI stats + arrival-time precision computed in-session at zero team cost).
 - Tier A1 re-summed at 19.6 ph, then amended: **+1.5 independent FNR/FPR oracle** (round-2 BasedAI hardest question — the ground-truth labels must come from a separate naive conjunction-walk implementation, never the compiler under test), **+1.5 hosted Watcher promoted A2→A1** (Fetch bonus honesty), **−1.0 trims** (BUIDL page 1.5→1.0, README first screen 1.0→0.5), **−0.5** (PR mechanics simplified by the morning-skeleton move). **Tier A1 final ≈ 21.1 ph → committed ≈ 73.1 ph.**
 - Tier A2 (schedule-gated) now 4.0 (hosted Watcher promoted out): TVmaze snapshot quote 0.5 · rollback proof panel 1.0 · cumulative close strip 0.5 · live drift/TTC 1.0 · live bench command 1.0 → **77.1 if Friday holds**.
+- **Post-Standard amendment (D9): +0.5 net** — restricted runbooks' ACL moves to real Jira issue security (sync reads one more field; replaces the sim-side KB-restriction source). Committed ≈ **73.6**; the dual-enforcement RESTRICT beat and the audit-API external clock cost nothing further (same demo slot, same bench).
 - One Tier-B branch ≈ +3.0–3.5 → **≈80.1–80.6 absolute worst case — 0.6 over the 80 ceiling**, so the pre-ratified rule is: if the Tier-B branch fires in full, the cumulative close strip (0.5) and one A2 item drop automatically. Tier C stays unfunded.
 - Structural change (round-2): the conformance bench + oracle + adversarial suite (~7 ph) are **decoupled from product code** and run with the bounded-technical contributor from Friday morning, with synthetic results committed BEFORE the 21:00 freeze — this removes them from Friday's two-builder wall-clock (the binding constraint) and from the "BasedAI extras" cut-line.
 - Enforcement: 13:00/17:00 checkpoints; 18:00 vertical-slice gate immovable; mutation bench at 18:30 (chip numbers must pre-date the 20:00 run-through); **stand-up must produce a named-person hour grid** (the documents deliberately do not assign people — round-2 Technical fatal is that no one owns the PR; the owner is named at stand-up).

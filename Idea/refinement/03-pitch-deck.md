@@ -289,7 +289,7 @@ Layout: plain table, small type. Purpose: when any number is challenged, jump he
 - Every memory record stores the **full set of source permission constraints** (from the Jira/KB articles and tickets it derives from); retrieval must satisfy **all of them** — conjunction, not one strictest label.
 - A precompiled effective-policy cache makes the check one indexed lookup — that's the P99 number: **‹XX› ms over the 25k-record real-incident store, concurrent queries** (fill from benchmark).
 - **Benchmarked in the track's own published evaluation vocabulary**: FNR / FPR over 10,000 ground-truth queries, P50/P99, end-to-end overhead, ACL drift, time-to-consistency — each vs its published threshold, pass/fail, in `bench/RESULTS.md`; six named adversarial attacks covered in `tests/test_adversarial.py`.
-- **Revocation cascades**: revoke the source article in Jira → derived fix records, summaries and embedding entries become unretrievable within seconds, with a denial audit event. (60-second segment in the video.)
+- **Revocation cascades — dual-enforcement**: flip the runbook issue's security level in Jira → **Jira itself hides the runbook from the non-cleared principal (real issue-security enforcement, ≤5 s measured)** AND every derived fix record, summary and embedding entry becomes unretrievable within one poll tick, with denial audit events in BOTH logs (ours hash-chained; Jira's own audit records API). (60-second segment in the video.)
 - Fallback mode **fails closed**: if ACL freshness is uncertain, the record is not served.
 - Ships as a standalone library; Precedent imports it. 100% open-weight models, named in README.
 

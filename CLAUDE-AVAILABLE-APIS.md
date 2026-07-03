@@ -12,6 +12,8 @@ set +a
 
 - Jira Service Management Cloud
   - Site: `https://precedentlabs.atlassian.net`
+  - Cloud ID: `05c417c1-4d11-41ff-862f-ed360c3342ed`
+  - Auth mode: `basic_site` using Atlassian account email + API token.
   - Project: `MEDIA`
   - Project ID: `10001`
   - Service desk ID: `1`
@@ -19,8 +21,10 @@ set +a
   - Required request fields: `summary`, `description`
   - Optional fields: affected services `customfield_10044`, urgency `customfield_10049`, impact `customfield_10004`
   - Verified: auth works, request type fields work, and test issue `MEDIA-1` was created.
-  - **Tier + ACL APIs verified (3 Jul session):** the site is on JSM **FREE** (`GET /rest/api/3/instance/license`) — the planned Standard trial was never provisioned, **and it turns out it isn't needed**: on Free, the full ACL-source surface works via API — project role create (roles `precedent-rights-ops`=10007 and `precedent-scheduling-ops`=10008 now created for real), role membership add/read/remove on MEDIA (200/200/204), permission scheme create/grant-add/delete (201/201/204), scheme read (MEDIA scheme id 10000, 126 grants). Caveat: Free may not enforce custom schemes in Jira's own UI — irrelevant to the demo, since Precedent enforces at its own retrieval layer and Jira is only the polled ACL source of truth.
-  - Site has ONE human user (Taha). For the two-principal ACL demo: invite a 2nd free agent seat (JSM Free allows 3) or flip the single account between roles 10007/10008.
+  - **Tier: JSM STANDARD (upgraded 3 Jul, verified live — `instance/license` → `PAID`).** The Free-tier enforcement caveat is gone. Full ACL-source surface verified via API across both sessions: project role create (roles `precedent-rights-ops`=10007 and `precedent-scheduling-ops`=10008 exist), role membership add/read/remove on MEDIA (200/200/204), permission scheme grant add/delete **on the live assigned scheme 10000** (201/204), scheme read (126 grants).
+  - **NEW (Standard-only, created + verified 3 Jul): issue security.** Scheme **"Precedent Restricted Runbooks" (id 10000)** created and **associated with MEDIA**; levels: **"Rights Ops Only"=10000** (member: role 10007), **"Scheduling Ops Only"=10001** (member: role 10008). Setting/unsetting `security` on issues via `PUT /rest/api/3/issue/{key}` works (204); `SET_ISSUE_SECURITY` is already granted to Administrators/Service Desk Team. IDs recorded in `.env`. ⚠️ Enforcement propagation: role-membership changes take seconds to reflect in issue visibility (permission cache) — see working notes for the measured window.
+  - **NEW (Standard, verified): Jira audit records API** — `GET /rest/api/3/auditing/record` returns the site audit log (593 records; permission-scheme and role events with ms timestamps). Use as the independent external clock for the drift/TTC bench and as audit-trail corroboration.
+  - Site has ONE human user (Taha). For the two-principal ACL demo: invite a 2nd agent seat (covered by the Standard trial) or flip the single account between roles 10007/10008.
 
 - Venice AI inference API
   - Base URL: `https://api.venice.ai/api/v1`
