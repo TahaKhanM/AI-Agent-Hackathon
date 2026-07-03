@@ -53,6 +53,7 @@ Airplane-first — the whole bench, the 6/6 attack suite and the audit-coverage 
 make install            # uv venv (Python 3.13) + deps
 make test               # full suite
 make bench              # regenerates precedent_memory/bench/RESULTS.md (the conformance table) in ~5 s
+make bench-extractor    # scores the frozen extractor over the seed-4207 mutation corpus (0 false-fast-paths)
 make console            # the judge console on :8000 (seeded local demo)
 ```
 
@@ -83,19 +84,27 @@ Protocol topology: 5 hierarchy levels · 20 roles · 1,000 ACL-tagged docs · 40
 |---|---|---|---|
 | FNR (leak: oracle DENY, compiler ALLOW) | **0 leaks / 5,219 deny-expected = 0.000%** | < 0.1% | ✅ |
 | FPR (outage: oracle ALLOW, compiler DENY) | 0 / 4,781 allow-expected = 0.000% | < 2% | ✅ |
-| P50 latency (permitted() bitmask check) | ~0.4 µs | < 50 ms | ✅ |
-| P99 latency (permitted() bitmask check) | ~0.5 µs | < 200 ms | ✅ |
-| End-to-end overhead (permission check on hot path, P99) | ~0.015 ms | < 100 ms | ✅ |
-| Derived-memory correctness (1k lineage artifacts vs oracle) | 100.00% | > 99% | ✅ |
-| ACL drift (stale-allow after one sync tick) | 0.000% (synthetic; live Saturday) | < 0.5% | ✅ |
-| Time-to-consistency (flip → recompiled deny) | ~0.02 ms (synthetic; live Saturday) | < 5 min | ✅ |
-| Audit coverage (every allow/deny/sync/exec path) | 100% + hash chain verified | 100% | ✅ |
+| P50 latency (permitted() bitmask check) | 0.423 µs | < 50 ms | ✅ |
+| P99 latency (permitted() bitmask check) | 0.445 µs | < 200 ms | ✅ |
+| End-to-end overhead (permission check on hot path, P99) | 0.0130 ms | < 100 ms | ✅ |
+| Derived-memory correctness (1k lineage artifacts vs oracle) | 3,000/3,000 probes = 100.00% | > 99% | ✅ |
+| ACL drift (stale-allow after one sync tick) | 0/200 = 0.000% (synthetic; live Saturday) | < 0.5% | ✅ |
+| Time-to-consistency (flip → recompiled deny) | 0.0180 ms median (synthetic; live Saturday) | < 5 min | ✅ |
+| Audit coverage (every allow/deny/sync/exec path) | 300/300 = 100.0% + hash chain verified | 100% | ✅ |
 | Permission-check curve (1k/5k/25k/100k records) | flat / O(1) | flat/log | ✅ |
 | Adversarial attacks | **6/6** | 6/6 | ✅ |
 
 The six named adversarial attacks (`tests/test_adversarial.py`), each asserting deny + no
 restricted-content leak + an audit event (or a bounded timing delta): **query inference ·
 metadata bypass · timing attack · collection attack · prompt injection · derived-memory attack**.
+
+**Extractor robustness (deterministic class extractor, seed 4207 · 100-mutation corpus).**
+`make bench-extractor` scores the frozen deterministic extractor — the only path that can unlock
+the standing-approval fast-path — over 100 messy-ticket mutations (typos, colloquial symptoms,
+dropped codes, red-herring decoys): **0 false-fast-paths / 100 (0.00%)** — no mutation ever
+produced a *wrong confident* class that could fast-path a wrong fix — and **25/25 red-herring
+decoys resisted** (an unknown code degrades to human review rather than grabbing a look-alike
+known code). Source of truth: `precedent_memory/bench/extractor_robustness.json`.
 
 Realism run: the same harness over the UCI ~**25k-record store** (dataset #498, ACL boundaries
 from real `assignment_group` fields) — measured live Saturday and posted as a PR comment.
