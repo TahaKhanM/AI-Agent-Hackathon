@@ -1,6 +1,6 @@
 # Checkpoint 1 — T1 + T3 merged into main (verified green)
 
-**Cut:** 2026-07-03, by the merge/checkpoint Ultracode session — **local only** (NOT pushed to origin; repo NOT made public).
+**Cut:** 2026-07-03, by the merge/checkpoint Ultracode session. The session itself ran **no `git push`** and did **not** change repo visibility. Note: the repo was already public, and an **external git auto-sync on the machine subsequently pushed `main` + this tag to origin** (verified: no push command, hook, or sub-agent in the session did it). gitleaks was clean over the merged history, so no secret was exposed — but the publish happened via auto-sync rather than the human's intended scrub-gated step. See the "Next steps" note.
 **Tag:** `checkpoint-1-t1-t3-merged`
 **Merged main SHA:** `02e9f7f`
 
@@ -109,5 +109,5 @@ Topology: 5 levels · 20 roles · 1,000 docs · 40 principals · 10,000 queries 
 
 ## Next steps (NOT done by this session)
 
-- **Human:** push merged `main` + this tag to origin (`git push --follow-tags origin main`); do **not** flip the repo public yet (gated on the full A–E scrub, sequenced in PROMPT B).
+- **Human:** merged `main` + this tag already reached origin via the machine's git auto-sync (not the session). The repo is already public. Run the A–E secrets scrub (`Prep/submissions/SCRUB-AND-PUBLISH-CHECKLIST.md`) retroactively and verify logged-out that no secret is exposed (gitleaks is already clean); decide whether the early publish is acceptable, and consider pausing the auto-sync if you need tighter control of what lands on the public remote.
 - **PROMPT B (`Prompts/06-ultracode-finish-remaining.md`):** finish the remaining buildable work (B1–B12), starting with wiring the standalone Watcher and re-confirming the bench, then the ambition ladder, N1/N2 content, demo-prep, and the conditional selection-branch features.
