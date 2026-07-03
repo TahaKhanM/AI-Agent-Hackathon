@@ -2,7 +2,7 @@
 
 *A thorough, jargon-free breakdown of all five roles. Read your own section closely; skim the others so you understand what your teammates are building and how it all fits. The five roles are labels (T1, T2, T3, N1, N2) — the team decides who is who at kickoff.*
 
-**The shape of it:** Two people build the "engine" and "brain" of the product (T1, T2). One person builds the proof-and-paperwork layer and handles submitting (T3). Two people make the whole thing understandable and presentable — the real data, the fix-instructions, the deck, the video, the outreach (N1, N2). Everyone has the code and good AI tools, so N1 and N2 commit their own work directly.
+**The shape of it:** Two people build the "engine" and "brain" of the product (T1, T2). One person builds the proof-and-paperwork layer and handles submitting (T3). Two people make the whole thing honest and presentable — the content-integrity of the data and fix-instructions, the deck, the video, the outreach (N1, N2). Everyone has the code and good AI tools, so N1 and N2 commit their own work directly.
 
 A note that applies to everyone: **the goal is the demo working.** The single most important thing the whole team is racing toward is the "vertical slice" — the core demo running end-to-end. Everything else is secondary to that.
 
@@ -16,7 +16,7 @@ A note that applies to everyone: **the goal is the demo working.** The single mo
 
 1. **The connection to the AI models.** Our product is only allowed to use "open" AI models (a hard rule for one of the prizes). You wire up the connection to those models and add a safety check that refuses to run if anything tries to sneak in a banned model. You also register a first, simple chat agent early — because the network we're on takes time to "notice" a new agent, so starting it early matters.
 
-2. **The fake company ("the simulator").** We can't demo on a real broadcaster's systems, so you build a realistic stand-in: a pretend TV scheduler, a rights database, a publishing system. It's seeded with **real public data** (a real UK TV schedule, real past-incident records), and — importantly — you *keep the messiness* (missing fields, duplicate names). That mess is what makes problems appear naturally, and the judges reward realism. You also build the exact demo problems (incidents 1, 2, 3) so they happen the same way every rehearsal, plus a switch that makes a fix fail on purpose (so we can show the automatic undo).
+2. **The fake company ("the simulator").** We can't demo on a real broadcaster's systems, so you build a realistic stand-in: a pretend TV scheduler, a rights database, a publishing system. It's seeded with **real public data** (a real UK TV schedule, real past-incident records), and — importantly — you *keep the messiness* (missing fields, duplicate names). That mess is what makes problems appear naturally, and the judges reward realism. You also build the exact demo problems (incidents 1, 2, 3) so they happen the same way every rehearsal, plus a switch that makes a fix fail on purpose (so we can show the automatic undo). You also **write the ~10 fix-instructions ("runbooks") the loop looks up** — drafted from real published procedures — so the whole engine stands on its own; N1 then verifies each one is honestly sourced and correctly flagged.
 
 3. **The fix process itself ("the loop").** This is the heart of it: read the problem → work out exactly what kind of problem it is using fixed rules (not the AI guessing) → look up the fix → check the risk → ask for approval (or run instantly if pre-approved) → do it → check it worked → undo it if it didn't → remember it. The clever bit you protect: when a problem type has been pre-approved, the fix runs with **zero AI calls** — that's how it happens in ~15 seconds and why it's reliable on stage.
 
@@ -77,27 +77,27 @@ A note that applies to everyone: **the goal is the demo working.** The single mo
 
 ---
 
-## N1 — The real stuff and the deck: data, fix-instructions, and the slides
+## N1 — Content integrity, the pitch, and the story: honest data and the deck
 
-**Who you are, simply:** You make the demo *real* and you make the pitch *look the part*. You have the code and a good AI tool, so you commit your own work — you don't hand it to anyone.
+**Who you are, simply:** You keep the demo *honest* and you make the pitch *look the part*. T1 now pulls the real data and drafts the fix-instructions so the engine can stand on its own; you're the second set of eyes that makes sure all of it is truthful and correctly labelled, and you own the deck. You have the code and a good AI tool, so you commit your own work.
 
 **What you're doing, in order:**
 
-1. **The fix-instructions ("KB articles").** When Precedent looks up a fix, it reads a written instruction (a "runbook"). You write about ten of these, adapted from **real, published procedures** (with a link to the real source in each — never invented). Five come first because the demo needs them: the main "TV guide publish failed" one, two restricted ones (only the rights team can see them — this is what makes the "it refuses" moment work), the famous CrowdStrike outage fix, and one deliberately out-of-date one (so we can show the AI flagging staleness). There's an exact format to follow, and your AI tool can draft these fast — your job is to check the sources and the permission flags and commit them.
+1. **Checking the fix-instructions ("KB articles").** When Precedent looks up a fix, it reads a written instruction (a "runbook"). T1 drafts about ten of these from **real, published procedures**; your job is to verify each one — that the link to the real source is genuine (never invented), that the "only the rights team can see this" flags are on the two restricted ones (this is what makes the "it refuses" moment work), and that the deliberately out-of-date one is marked stale. A wrong flag breaks the demo, so you're the gate that catches it. Get on this early — the demo needs the critical five.
 
-2. **The real data.** You pull the real public datasets (a real UK TV schedule, streaming catalogues, the incident log) into the repository so the simulator has real content to work with. Where this touches code (loading the data in), your AI tool does the heavy lifting and a builder gives it a quick look. **Keep the mess** — the missing and duplicate bits are what make it realistic.
+2. **Guarding the real data.** T1 pulls the real public datasets (a real UK TV schedule, streaming catalogues, the incident log) into the repository. You make sure the pull **kept its mess** — the missing and duplicate bits are what make it realistic, and sanitising them would cost us points.
 
-3. **The honesty labels.** You write the little "where every piece of data came from and what licence it's under" table, including the honest note that we *deliberately rejected* two data sources because their terms don't allow AI use. (That diligence is itself a point-scorer.)
+3. **The honesty labels.** You write the "where every piece of data came from and what licence it's under" table, including the honest note that we *deliberately rejected* two data sources because their terms don't allow AI use. (That diligence is itself a point-scorer, and it's entirely yours.)
 
-4. **The slide deck.** You build the pitch deck from a spec that's already written slide-by-slide — you're mostly transcribing it accurately, not designing from scratch. The measured numbers get filled in near the end (from T3's scorecard). One firm rule: **never leave a blank "‹XX›" placeholder** in the final version — fill it with the real number or remove the line.
+4. **The slide deck.** You build the pitch deck from a spec that's already written slide-by-slide — you're mostly transcribing it accurately, not designing from scratch. With the data and runbooks now off your plate, this is where your time goes. The measured numbers get filled in near the end (from T3's scorecard). One firm rule: **never leave a blank "‹XX›" placeholder** in the final version — fill it with the real number or remove the line.
 
-5. **Saturday:** the "before" time-lapse clip (you perform the slow manual fix once and speed it up 8×), the pitch cheat-sheets, and helping run the rehearsal.
+5. **Saturday:** the "before" time-lapse clip (you perform the slow manual fix once and speed it up 8×), the voice-over script, the pitch cheat-sheets, and helping run the rehearsal.
 
-**Why it matters:** "Realistic data" is something the main judge explicitly demands, and the deck is what half the judges see if we're not picked to present live. You own both.
+**Why it matters:** "Realistic data" is something the main judge explicitly demands — and having a *different person* verify the data and runbooks the builder produced is the same segregation-of-duties the product itself sells. The deck is what half the judges see if we're not picked to present live. You own the honesty and the pitch.
 
-**How you know you're done:** five fix-instructions committed with real source links and correct permission flags; the data table is honest and complete; the deck matches the spec with real numbers and zero blanks.
+**How you know you're done:** every KB article verified (real source link, correct permission and staleness flags); the data pull is honestly labelled, complete, and still messy; the deck matches the spec with real numbers and zero blanks.
 
-**Your first move:** `git checkout content/n1-data-deck`, open `data/kb/README.md` and the guide at `Plan/workflows/N1-kb-articles.md`, and write the five critical fix-instructions. Full detail: `Plan/BUILD-PLAN.md` §4 (N1).
+**Your first move:** `git checkout content/n1-data-deck`, open `data/kb/README.md` and the guide at `Plan/workflows/N1-kb-articles.md`, and review T1's KB articles as they land — then own the provenance table and the deck. Full detail: `Plan/BUILD-PLAN.md` §4 (N1).
 
 ---
 
@@ -130,7 +130,7 @@ A note that applies to everyone: **the goal is the demo working.** The single mo
 - **T1** makes problems happen and fixes them (the engine).
 - **T2** remembers the fixes safely and shows it all on screen (the memory + the face).
 - **T3** proves it with numbers and gets it submitted (the proof + the paperwork).
-- **N1** makes it real and puts it on slides (the data + the deck).
+- **N1** keeps the data honest and puts the pitch on slides (content-integrity + the deck).
 - **N2** turns it into a video and a story, and checks nobody lied by accident (the presentation + the conscience).
 
 Everyone's work meets at the same finish line: **the core demo works, it's recorded honestly, and it's submitted to all three tracks with time to spare.** The demo comes first, always.

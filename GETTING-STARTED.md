@@ -68,12 +68,12 @@ git checkout build/t3-bench-submissions
 ```
 First task (a human GitHub step): fork `github.com/BasedAICo/hackathons`, copy `_TEMPLATE`, open the **skeleton PR** — full steps in [`Plan/workflows/T3-github-publication.md`](Plan/workflows/T3-github-publication.md). In parallel, open `precedent_memory/bench/conformance_bench.py` (stub) and `02` §2.7, and build the conformance bench + **independent oracle** + all **6/6** adversarial attacks (decoupled — zero product-code imports, so you can start before the loop is merged). *Drive your tool:* "implement `conformance_bench.py` to emit `precedent_memory/bench/RESULTS.md` as a measured-vs-threshold-vs-pass/fail table; the oracle is a separate naive-conjunction module with no import from store/retrieve." Mission: §4 T3.
 
-### N1 — data & content lane, deck · branch `content/n1-data-deck`
-**Own:** the material that makes the demo real, and the deck. You have repo access — **commit your own work.** **Start now:**
+### N1 — content integrity, provenance & deck · branch `content/n1-data-deck`
+**Own:** the *honesty* of the demo (content-integrity + provenance) and the deck. T1 now produces the data + KB; you verify and present them. You have repo access — **commit your own work.** **Start now:**
 ```bash
 git checkout content/n1-data-deck
 ```
-First task: write the **critical-five KB articles** into `data/kb/` (see [`data/kb/README.md`](data/kb/README.md) + [`Plan/workflows/N1-kb-articles.md`](Plan/workflows/N1-kb-articles.md) + `Idea/refinement/01-realistic-data-plan.md` §4). These feed the retrieval demo, so they're wanted early. *Drive your tool:* attach `01` §4's table and have it draft each article in the exact YAML front-matter shape; you review the `adapted_from`/ACL/stale flags and commit to `data/kb/`. **Then** the seed data (`data/raw/`, with T1's loaders), the provenance table, and the deck from `03-pitch-deck.md`. Mission: §4 N1.
+First task: **review T1's critical-five KB articles** as they land in `data/kb/` (see [`data/kb/README.md`](data/kb/README.md) + [`Plan/workflows/N1-kb-articles.md`](Plan/workflows/N1-kb-articles.md) + `Idea/refinement/01-realistic-data-plan.md` §4) — verify each has a real `adapted_from` link and correct ACL/stale flags; you're the honest-data gate. **Then** own the provenance table, confirm the seed data kept its messiness, and build the deck from `03-pitch-deck.md`. Mission: §4 N1.
 
 ### N2 — video, submissions, outreach, QA · branch `content/n2-video-submissions`
 **Own:** how the work is presented and submitted. You have repo access — **commit your own work.** **Start now:**

@@ -1,6 +1,6 @@
 # PACKET N1-KB — Write the 10 MediaCo KB runbook articles (adapted from real published procedures)
 
-> WHO RUNS THIS: **N1** — you own the data & content lane. You have repo access and a capable AI coding tool with a decent model. You write the articles **straight into the repo** and commit them yourself.
+> WHO RUNS THIS: **T1 authors, N1 verifies.** T1 now drafts and commits these articles as part of building the self-sufficient sim + retrieval demo (§4 T1); **N1 owns their content integrity** — verifying every `adapted_from` source link and the ACL/stale flags, and defending the honest-data story (§4 N1). This file is the content spec both work from. (Originally an N1-only packet; ownership split when T1 absorbed the data + KB lane so the demo never waits on the content lane.)
 > WHERE THE FILES LAND: `data/kb/KB-00NN-<slug>.md`. Confirm the exact loader path with **T2** (whose memory package parses these) before you commit the first one; then batch the rest to the same path.
 > WHERE THIS FITS: **Phase 0 → Phase 1**, and this is your FIRST job. The articles are demo-critical — incident 1 retrieves article #1; incident 3 refuses on articles #4/#5. **The critical five (KB-0001, 0004, 0005, 0006, plus one stale — 0008) must be committed early** so the retrieval demo has something real to retrieve at the first merge / Checkpoint A. The remaining five follow before the freeze (G2).
 
