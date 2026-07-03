@@ -1,55 +1,41 @@
-"""Drive one incident through the REAL orchestrator, live.  [owner T1, task T1-10]
+"""Trigger the in-process orchestrator for one incident.  [owner T1, task T1-10]
 
-Usage: python scripts/drive_incident.py <n> [--principal P] [--approve]
-Fetches incident <n> from the running sim, runs orchestrator.handle over the shared
-memory db, and streams every hop to the running console's live trace panel. This is the
-on-stage action (and the airplane-mode rehearsal): `make sim` in one shell, this in
-another. n=1 slow-path (approval), n=2 fast-path (STANDING, zero-LLM), n=3 refused (rights).
+Usage: python scripts/drive_incident.py <n> [--flake] [--no-approve] [--console URL]
+POSTs to the same-process demo server's /api/drive/{n}, which runs the REAL loop inside the
+console process (sharing STATE.conn, lighting the live trace panel). n=1 slow-path, n=2
+fast-path (STANDING, zero-LLM), n=3 refused (rights). --flake arms the one-shot verification
+failure first (the recovery beat). Requires `make sim` running.
 """
 from __future__ import annotations
 
 import argparse
+import json
 import os
-
-from precedent import console_link, orchestrator
-from precedent.contracts import ApprovalDecision, IncidentEvent
-from precedent.tools import SimTools
-from precedent_memory import db
+import urllib.request
 
 
-def _auto_approve(principal: str):
-    def approve(req):
-        return ApprovalDecision(incident_id=req.incident_id, plan_hash=req.plan_hash,
-                                decision="approve", approver_principal=principal,
-                                channel="console", decided_at=db.utcnow_iso())
-    return approve
+def _post(url: str) -> dict:
+    req = urllib.request.Request(url, method="POST")
+    with urllib.request.urlopen(req, timeout=30) as r:  # noqa: S310 — localhost demo trigger
+        return json.loads(r.read())
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("n", type=int, choices=(1, 2, 3))
-    ap.add_argument("--principal", default="scheduling-ops")
-    ap.add_argument("--approve", action="store_true",
-                    help="auto-approve the slow-path gate (rehearsal); omit for a real human click")
+    ap.add_argument("--flake", action="store_true", help="arm the recovery-beat flake first")
+    ap.add_argument("--no-approve", action="store_true",
+                    help="do not auto-approve the slow-path gate (leave it to a human)")
     ap.add_argument("--console", default=os.environ.get("PRECEDENT_CONSOLE_URL",
                                                          "http://127.0.0.1:8000"))
     args = ap.parse_args()
-
-    mem_path = os.environ.get("PRECEDENT_MEMORY_DB", "data/precedent.db")
-    sim = SimTools()   # PRECEDENT_SIM_URL
-    trace = console_link.http_trace(args.console)
-    conn = db.connect(mem_path)
-    try:
-        p = sim.incident(args.n)
-        inc = IncidentEvent(incident_id=p["incident_id"], raw_text=p["raw_text"],
-                            source="sim", observed_at=p["observed_at"])
-        res = orchestrator.handle(inc, structured=p["structured"], conn=conn, tools=sim,
-                                  principal=args.principal, trace=trace,
-                                  approve=_auto_approve("ops-lead") if args.approve else None)
-        print(f"incident {args.n}: verified={res.verified} rolled_back={res.rolled_back} "
-              f"outcome={res.step_results[0].get('outcome')}")
-    finally:
-        conn.close()
+    base = args.console.rstrip("/")
+    if args.flake:
+        out = _post(f"{base}/api/drive/{args.n}/flake")
+    else:
+        q = "?approve=false" if args.no_approve else ""
+        out = _post(f"{base}/api/drive/{args.n}{q}")
+    print(json.dumps(out))
 
 
 if __name__ == "__main__":
