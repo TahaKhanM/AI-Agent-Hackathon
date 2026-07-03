@@ -122,7 +122,7 @@
 - Say the word **"unscripted"** on stage: *"The incident text is deliberately mangled — typos, wrong terminology, missing error codes — and any judge can file a ticket from their phone right now; Precedent triages it or safely escalates."* (Conduct's 35% criterion, answered out loud.)
 - Incident 3 payoff in ONE sentence, no jargon: *"It isn't allowed to read that runbook — so it refused, and routed the incident to the team that is."* Then: *"It knows what it's not allowed to touch — that's why an enterprise lets it in the door."*
 - Pre-empt the simulator question in one clause: *"MediaCo mirrors the real scheduling/rights/EPG chain — our agents only touch it through the same API surfaces the real vendors expose."*
-- Demo execution: incidents 1–2 pre-recorded screen capture narrated live; ONE live element — the Approve click (cached-Jira fallback if venue Wi-Fi dies). Incident 3 in the recording.
+- Demo execution mode: decided mechanically by 04 §4.3's rehearsal gates at Sat 09:00 (live-local-first default; two failed gates flips to narrated recording + one live Approve click). This deck does not choose — the gate rule does.
 
 ---
 
@@ -162,7 +162,7 @@
 **Speaker notes:**
 - 15 seconds max if spoken at all: *"Five specialised agents run the loop; a deterministic policy engine — not the model — decides what may execute; and the memory inherits the permissions of the documents and tickets it learned from, live-synced from Jira."*
 - For Fetch judges (video, not stage): three of the agents are registered on Agentverse and collaborate over Chat Protocol; the full loop runs inside an ASI:One conversation — public shared-chat URL in the submission.
-- For BasedAI judges (README, not stage): 100% open-weight pipeline (Venice-served Llama/Qwen + open-weight embedder), models named in the README; the permission-aware memory ships as a standalone library Precedent imports.
+- For BasedAI judges (README, not stage): 100% open-weight pipeline — Qwen3.5-35B-A3B (Apache-2.0), DeepSeek-V4-Flash/Pro (MIT), BGE-M3 embedder (MIT), all Venice-served, verified against public HF weights with the /models dumps committed; the permission-aware memory ships as a standalone library Precedent imports.
 
 ---
 
@@ -193,9 +193,9 @@
 >
 > incident → fix → **precedent** → faster next time → more incidents trusted to it → ↻
 >
-> **141,000** real incident events ingested · **‹XX›%** matched to a documented fix · **P99 ‹XX› ms** permission-checked retrieval
+> **141,000** real incident events ingested · **94%** arrived with their fix already precedented — and still took a median **18 hrs** to resolve by hand · **P99 ‹XX› ms** permission-checked retrieval · triage on mangled tickets: **‹XX›% correct-match, ‹XX›% safe-degrade, ‹XX›% false fast-path**
 
-**Visual/layout:** Flywheel diagram centre (four arrows in a circle). The three scale numbers as a metrics strip — **placeholders ‹XX› filled Friday night from the actual benchmark run** (Conduct judge's "scale artifact" ask). If the 141k ingest is cut from the build, replace the strip with the live demo counters (fixes remembered / tickets deflected / $ saved).
+**Visual/layout:** Flywheel diagram centre (four arrows in a circle). The metrics strip carries OUR measured numbers — the 94%/18h are already computed (3 Jul, `data/analysis/uci-baseline-results.md`; the 18h is **calendar** hours — keep the label); the P99 and extractor numbers fill Friday night from `bench/RESULTS.md` and the 100-mutation run. **Do not ship empty ‹XX› placeholders — bake the real Friday-night values into the PDF export** (no "speaker will cover it" fallback; ~50% of judges see only the PDF).
 
 **Speaker notes:**
 - *"Documents go stale; executed fixes with provenance don't. Every incident Precedent resolves makes the next one faster and safer — accuracy becomes a function of tenure in the account. That's the moat Moveworks proved and ServiceNow paid $2.85B for."*
@@ -262,14 +262,17 @@
 | Netflix auto-remediates a failure class in-house | 56% | Netflix TechBlog |
 | Moveworks acquisition | $2.85B | ServiceNow newsroom, Mar 2025 |
 | Deflection precedent | 50–88% | Moveworks — **vendor-claimed** |
+| Fix-class match rate in 24,918 real incidents | 94.4% (symptom-level: 98.6%) | **our measurement**, UCI CC BY 4.0 corpus, script committed (3 Jul) |
+| Median resolution, precedented repeats | 18.2 **calendar** hrs (p75 136.6) | same measurement — never blend with the 8.85 *business*-hr MetricNet row |
+| Recurring classes ≥4 occurrences | 558 classes = 94.8% of volume | same measurement — the ladder-bootstrap evidence |
 
 Layout: plain table, small type. Purpose: when any number is challenged, jump here and show the sourcing discipline itself — it scores.
 
 ### A2 — Data provenance (the "not made up" slide)
 
-- KB seeded with **real published runbooks**: GitLab public runbooks repo, Kubernetes SIG runbooks, the actual CrowdStrike channel-file remediation bulletin.
-- Fix history bootstrapped from a **public ServiceNow-derived incident event log (~141k events / ~25k incidents, Kaggle)**.
-- Scheduler/rights/EPG seeded with **real programme metadata** (TMDB / BBC /programmes / XMLTV feed — whichever the build landed).
+- KB seeded with **real published runbooks**: GitLab public runbooks repo, Kubernetes SIG runbooks, the actual CrowdStrike channel-file remediation bulletin — every article carries its `adapted_from` URL.
+- Fix history bootstrapped from the **UCI ServiceNow incident event log (141,712 events / 24,918 incidents, CC BY 4.0)** — measured: 94% fix-class match rate, 18.2h median for precedented repeats (calendar hrs).
+- Scheduler/rights/EPG seeded with **real UK programme metadata** (TVmaze, CC BY-SA / Freeview XMLTV snapshot) and **real streaming-catalog rights data** (CC0 Kaggle) — only the licence-window terms are synthesised, by a rule stated in the README. **We checked licences and rejected TMDB (its API terms prohibit AI/ML use) and IMDb — say so: the diligence is itself a credibility beat.**
 - Incident text **mutated at generation time** (typos, colloquial symptoms, missing codes, red herrings) + live judge-filed tickets accepted.
 - Speaker line: *"The systems are simulated; the content is real."*
 
@@ -283,7 +286,8 @@ Layout: plain table, small type. Purpose: when any number is challenged, jump he
 ### A4 — Permission-aware memory (BasedAI depth)
 
 - Every memory record stores the **full set of source permission constraints** (from the Jira/KB articles and tickets it derives from); retrieval must satisfy **all of them** — conjunction, not one strictest label.
-- A precompiled effective-policy cache makes the check one indexed lookup — that's the P99 number: **‹XX› ms over ‹N›k ACL-tagged records, concurrent queries** (fill from benchmark).
+- A precompiled effective-policy cache makes the check one indexed lookup — that's the P99 number: **‹XX› ms over the 25k-record real-incident store, concurrent queries** (fill from benchmark).
+- **Benchmarked in the track's own published evaluation vocabulary**: FNR / FPR over 10,000 ground-truth queries, P50/P99, end-to-end overhead, ACL drift, time-to-consistency — each vs its published threshold, pass/fail, in `bench/RESULTS.md`; six named adversarial attacks covered in `tests/test_adversarial.py`.
 - **Revocation cascades**: revoke the source article in Jira → derived fix records, summaries and embedding entries become unretrievable within seconds, with a denial audit event. (60-second segment in the video.)
 - Fallback mode **fails closed**: if ACL freshness is uncertain, the record is not served.
 - Ships as a standalone library; Precedent imports it. 100% open-weight models, named in README.
@@ -336,7 +340,7 @@ Slides **2 → 5 → 6 (incident-2 clip only, 25 s) → 7 → 12**. Script: loop
 
 - **Format: 5 min total = ~3 min pitch + 2 min Q&A, in-person only.** Judges are VCs (LocalGlobe, Antler, EWOR) + sponsor judges. Day opens with an EWOR fireside chat — expect schedule drift; have the 90-second cut ready.
 - **Demo Day sign-up form was due TODAY 3 Jul 18:00** (https://forms.gle/fnUe3vL24wyJo6pD7); presenters announced ~22:00 tonight. DoraHacks submission (repo + this deck as PDF + video) due 4 Jul 23:59.
-- **Reliability protocol:** freeze demo code Fri ~21:00; record the demo video and ASI:One shared-chat session that night against the frozen build. Incidents 1–2 pre-recorded for the stage; ONE live element (the Approve click) running on the cached-Jira fallback by default. Airplane-mode rehearsal must pass. Never demo ASI:One live on stage — it lives in the video.
+- **Reliability protocol:** dirty-take insurance recording Fri ~16:00; freeze demo code Fri ~21:00; record the demo video and ASI:One shared-chat session that night against the frozen build. Demo mode (live-first vs recorded-first) is decided by 04 §4.3's rehearsal gates — single source of truth. Airplane-mode rehearsal must pass. Never demo ASI:One live on stage — it lives in the video.
 - **Rehearse to 2:40, three full run-throughs**, one of them with Wi-Fi off and one against a stranger (jargon check: if they can't repeat "the second time is free" and "it knows what it's not allowed to touch," cut more words).
 - **Kit:** laptop + HDMI/USB-C dongle, video file LOCAL on disk (never streamed), clicker, phone with the judge-ticket Jira form open as the Q&A party trick, printed one-pager of Appendix A1 numbers for the presenter's pocket.
 - **Q&A assignments:** one person owns numbers (A1), one owns tech (A3/A4/A6), one owns market (A5/A8). Never two people answering one question.
@@ -345,10 +349,15 @@ Slides **2 → 5 → 6 (incident-2 clip only, 25 s) → 7 → 12**. Script: loop
 
 problem = slides 2–3 · solution = slide 4 · product = slides 5, 7, 10 · tech = slide 8 (+A3/A4/A6) · use case = slides 6, 11 · demo flow = slide 6 + run-of-show table.
 
+## PDF EXPORT LAYER (adopted 3 Jul — ~50% chance the deck is judged with no speaker)
+
+Before exporting the DoraHacks PDF, add a single-line grey caption bar to each core slide carrying the one sentence the speaker would have said (e.g. slide 7: *"No one approved that second ticket — the approval moved earlier in time; it never left the loop."*). The stage deck stays clean; only the PDF export gets the layer (~0.5 ph, final step of the deck build). Also add one appendix slide **"What exists Monday morning"**: hosted Watcher live on Agentverse · `precedent_memory` as a standalone importable library · the ground-truth conformance bench · the public evidence index — durable artifacts only, no human-intent claims (those stay on the team slide, written by humans).
+
 ## PLACEHOLDERS TO FILL BEFORE EXPORT (owner: whoever builds the slides)
 
-1. Slide 10 metrics strip: ‹XX›% match-rate and P99 ‹XX› ms from Friday-night benchmark — **if the 141k ingest is cut, swap in live demo counters instead; do not ship empty placeholders**.
+1. Slide 10 metrics strip: P99 + extractor numbers from Friday-night `bench/RESULTS.md` and the 100-mutation run (94%/18h are already real — keep the calendar-hours label). **Bake final values into the PDF; never ship ‹XX›.**
 2. Slide 12: team names/photos/credentials + (only if true) the practitioner-validation line.
-3. Slide 6 provenance strip: replace with the datasets actually ingested.
-4. A7: real Agentverse addresses + ASI:One shared-chat URL, captured Friday night.
+3. Slide 6 provenance strip: TVmaze (CC BY-SA) / Freeview XMLTV / CC0 Kaggle catalogs / UCI CC BY 4.0 — never TMDB/BBC (rejected on licence/access; A2 says why).
+4. A7: real Agentverse addresses + ASI:One shared-chat URL, captured Friday night (provisional URL from the first clean afternoon run is acceptable).
 5. Team name on slide 1; export deck as PDF for DoraHacks.
+6. Demo-mode default: 04 §4.3's rehearsal-gate rule is the single source of truth — this deck's logistics section defers to it.

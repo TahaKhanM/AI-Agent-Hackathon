@@ -43,3 +43,45 @@
 | [03-pitch-deck.md](03-pitch-deck.md) | 12 slides + 8 Q&A appendix slides, build-ready, jargon-purged, 2:40 stage cut mapped |
 | [04-demo-and-video-script.md](04-demo-and-video-script.md) | Second-by-second 2:42 live script (+recovery beat), 4-min video script (80s ASI:One), 30s teaser, fallback branches |
 | [05-scale-story-and-qa.md](05-scale-story-and-qa.md) | Four-tier integration scale story, what-breaks-first ordering, full Q&A bank answering every judge question |
+
+---
+
+# SESSION 2 — v4 → v5 refinement run (3 July 2026, ~05:00–07:30)
+
+> Second full multi-agent cycle: live verification of all track rules (6/6 sources fetched), hands-on provisioning verification with real keys, fresh judges scoring **as-of-deadline** (unbuilt work discounted — a stricter standard than session 1's if-the-build-lands scoring), builder round, adversarial verification of every new claim. Full audit trail: [06-session-working-notes.md](06-session-working-notes.md).
+
+## Scores per round
+
+| Judge | S1 baseline (v4, if-build-lands) | S2 Round 1 (v5-in-progress, as-of-deadline) | What moved it |
+|---|---|---|---|
+| Conduct | 79 | **81** | UCI corpus measured (94.4%/18.2h) + verified de-risking banked; discounted for zero product code at T-40h |
+| Fetch.ai | 80 | **74** | Honest discount: all gates verified at 0% (Agentverse API returns zero agents); design story rated best-in-class |
+| BasedAI | 80 | **69** | The live track brief revealed a published evaluation framework (FNR/FPR/10 thresholds/6 named attacks) the entry had zero measured numbers against; open-weight gate PASSED with committed evidence |
+| Technical | 80 | **73** | Friday freeze arithmetic ~6ph short; two submission gates unowned (both fixed in-session); de-risking rated "strongest seen" |
+| VC | 79 | **74** | Team slide still placeholder (human-only item); pitch/memorability rated top-3 |
+
+Score deltas vs session 1 are **not regression** — they price execution risk and newly-discovered rules that session 1's judges could not see. The remaining gap to ceiling is mostly *build execution*, not design.
+
+## What this session verified or fixed (hard evidence, not planning)
+
+1. **BasedAI open-weight gate CLOSED**: all 4 pinned Venice models verified live with public HF weights; dumps committed (`docs/compliance/`); embed model pinned; fallback bench corrected (2 bad IDs found).
+2. **JSM Standard trial ELIMINATED**: full ACL API surface verified working on the Free tier; roles 10007/10008 created live; 2nd-seat limit (3 agents on Free) adversarially confirmed.
+3. **UCI match-rate item CLOSED with real numbers**: 94.4% fix-class match / 98.6% symptom-level / 18.2h precedented-repeat median / 558 classes = 94.8% of volume. The planned `knowledge=true` framing found INVERTED in real data and demoted before it reached a slide.
+4. **BasedAI PR deadline conflict FOUND** (repo README: "3 Jul end of day" vs Doc: "4 Jul before judging") → draft PR moved to Friday ~20:00.
+5. **BasedAI published evaluation framework RECOVERED** (missed by local exports) → bench rebuilt to conformance shape (10k ground-truth queries, all thresholds, 6/6 named attacks).
+6. **Fetch "Devpost fatal" REFUTED** by adversarial verification (hackpack boilerplate from the 2025 edition; EP5 = DoraHacks only). Mandatory README badges + ≥10-interaction discoverability gate found and adopted.
+7. **Competitor intel**: BioVault (purpose-built BasedAI entry, PR #3 open since 30 Jun) — differentiation plan: protocol-shaped measured numbers against a live external ACL source.
+8. ~20 doc-consistency fixes a probing judge would have caught (stale model names, TMDB references, webhook-vs-polling contradiction, demo-mode default conflict, bench/video overstatement).
+
+## Adoption summary (full tiers + ledger: 06 §7)
+
+Tier A1 unconditional ≈ +18.5 ph (conformance bench, 6/6 attacks, extractor measurement + robustness chip, audit test, hop-trail footer, console realism, submission-surface package for the ~50% no-stage world). Tier A2 schedule-gated ≈ +5.5. Tier B branches on tonight's 22:00 selection announcement. Rejected: on-chain Payment Protocol, dual-surface ticket, mid-demo degraded toggle, temporal-embargo demo beat (bench-test only). **Ledger closing balance: 70.5 committed / 76.0 gated / ≈79.5 worst case vs 60–80 capacity.**
+
+## Remaining items after this session (the to-do list that matters)
+
+- **[FATAL-if-missed, human, TODAY 18:00] Demo Day form** — unverifiable by documents; screenshot the confirmation.
+- **[FATAL, tonight ~20:00] BasedAI draft PR** — owner named at stand-up; template headings verbatim; README names all 6 adversarial tests + cites `docs/compliance/`; measured results pushed Sat with a PR comment; ask a mentor which deadline governs.
+- **[Blocking, Fri AM] Fetch gates from 0% → registered + 10+ interactions + provisional shared-chat URL.**
+- **[Blocking, Fri] The build itself** — 13:00/17:00 checkpoints + 18:00 vertical-slice gate are the enforcement mechanism.
+- **[Human] Team slide + post-Saturday intent + practitioner outreach (or delete the line); 2nd Jira seat invite; Gautam courtesy confirm.**
+- **[Sat 07:00–09:30] Bench results into the PR; rehearsal gates; 22:00-branch execution.**

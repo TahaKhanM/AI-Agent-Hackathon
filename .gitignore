@@ -21,6 +21,9 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+.secrets/
+kaggle.json
+access_token
 
 # Node
 node_modules/
@@ -44,3 +47,6 @@ venv/
 # Logs
 *.log
 logs/
+
+# Regenerable analysis artifacts
+data/analysis/*.pkl
