@@ -2,7 +2,7 @@
 PY := .venv/bin/python
 PIP := uv pip
 
-.PHONY: help install check-open-weight test lint secrets-scan sim console jira-smoke demo-reset bench freeze-check
+.PHONY: help install check-open-weight test lint secrets-scan sim console jira-smoke demo-reset bench bench-uci live-drift freeze-check
 
 help:
 	@echo "install          install core+dev deps into .venv (add agents extra separately)"
@@ -49,6 +49,16 @@ demo-reset:
 
 bench:
 	$(PY) -m precedent_memory.bench.conformance_bench
+
+# Saturday realism run (human): point the bench at the real UCI ~25k-record store.
+# Exits non-zero until the CSV is downloaded (see data/raw/SOURCES.md). "25k-record store".
+bench-uci:
+	$(PY) -m precedent_memory.bench.uci_realism
+
+# Saturday LIVE drift/TTC (human): real Jira flips, TTC anchored to /rest/api/3/auditing/record.
+# Guarded + fail-closed: exits non-zero when Jira is unconfigured or the live flag is unset.
+live-drift:
+	$(PY) scripts/live_drift_ttc.py
 
 # Pre-freeze guard (Fri 21:00): everything that must be true before recording.
 freeze-check: check-open-weight test secrets-scan
