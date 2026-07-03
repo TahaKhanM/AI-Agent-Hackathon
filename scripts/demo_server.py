@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import os
 
+from agents import approval
 from console.app import app
 from console.demo_state import STATE
 from precedent import console_link, orchestrator
@@ -27,6 +28,7 @@ from precedent_memory import sync as syncmod
 
 SIM_URL = os.environ.get("PRECEDENT_SIM_URL", "http://127.0.0.1:8100")
 _SYNC_INTERVAL_S = 20   # < the 60s freshness window, so restricted memory stays readable
+_PENDING: dict[str, object] = {}   # incident_id -> Prepared (same-process approval handoff)
 
 
 def _auto_approve(principal: str):
@@ -37,24 +39,65 @@ def _auto_approve(principal: str):
     return approve
 
 
+def _result(n, res):
+    return {"incident": n, "verified": res.verified, "rolled_back": res.rolled_back,
+            "outcome": res.step_results[0].get("outcome")}
+
+
 @app.post("/api/drive/{n}")
-def api_drive(n: int, approve: bool = True, principal: str | None = None):
+def api_drive(n: int, approve: bool = True, hold: bool = False, principal: str | None = None):
     """Run the REAL orchestrator for incident n IN this process, sharing STATE.conn under
-    STATE's lock (serialised with the console's own reads/writes) and streaming every hop to
-    the live trace panel. approve=true auto-approves the slow-path gate for the rehearsal;
-    the fast-path (STANDING) needs no approval."""
+    STATE's lock and streaming every hop to the live trace panel. approve=true auto-approves
+    the slow-path (rehearsal); hold=true instead PAUSES at the gate — records a pending
+    approval (10-min TTL) for a human to Approve via /api/drive/{n}/approve. The fast-path
+    (STANDING) needs no approval and runs straight through, zero-LLM."""
     principal = principal or STATE.principal
     with STATE._lock:
         sim = SimTools(base_url=SIM_URL)
         p = sim.incident(n)
         inc = IncidentEvent(incident_id=p["incident_id"], raw_text=p["raw_text"],
                             source="sim", observed_at=p["observed_at"])
-        res = orchestrator.handle(
-            inc, structured=p["structured"], conn=STATE.conn, tools=sim, principal=principal,
-            trace=console_link.in_process_trace(STATE),
-            approve=_auto_approve("ops-lead") if approve else None)
-    return {"incident": n, "verified": res.verified, "rolled_back": res.rolled_back,
-            "outcome": res.step_results[0].get("outcome")}
+        trace = console_link.in_process_trace(STATE)
+        prepared = orchestrator.prepare(inc, structured=p["structured"], conn=STATE.conn,
+                                        tools=sim, principal=principal, trace=trace)
+        if prepared.outcome in ("refused", "escalated"):
+            return _result(n, prepared.result)
+        if prepared.fast:
+            return _result(n, orchestrator.commit_execution(prepared, conn=STATE.conn,
+                                                            tools=sim, trace=trace))
+        if hold:   # pause at the gate — real held approval with TTL (fail-closed)
+            approval.record_pending(STATE.conn, prepared.approval_request, sender_address=principal)
+            _PENDING[inc.incident_id] = prepared
+            return {"incident": n, "status": "pending_approval",
+                    "plan_hash": prepared.approval_request.plan_hash,
+                    "expires_at": prepared.approval_request.expires_at}
+        decision = _auto_approve("ops-lead")(prepared.approval_request) if approve else None
+        return _result(n, orchestrator.commit_execution(prepared, conn=STATE.conn, tools=sim,
+                                                        trace=trace, decision=decision))
+
+
+@app.post("/api/drive/{n}/approve")
+def api_drive_approve(n: int, principal: str = "ops-lead"):
+    """Resume a HELD drive: a human Approve. Fail-closed — an expired/absent pending
+    approval NEVER executes (non-action)."""
+    inc_id = f"INC-{n}"
+    with STATE._lock:
+        approval.expire_stale(STATE.conn)                 # sweep first
+        row = approval.lookup_pending(STATE.conn, inc_id)
+        prepared = _PENDING.get(inc_id)
+        if row is None or prepared is None:
+            return {"incident": n, "status": "no_live_approval",
+                    "detail": "expired or absent — non-action (fail-closed)"}
+        decision = ApprovalDecision(incident_id=inc_id, plan_hash=row["plan_hash"],
+                                    decision="approve", approver_principal=principal,
+                                    channel="console", decided_at=db.utcnow_iso())
+        res = orchestrator.commit_execution(prepared, conn=STATE.conn,
+                                            tools=SimTools(base_url=SIM_URL),
+                                            trace=console_link.in_process_trace(STATE),
+                                            decision=decision)
+        approval.mark(STATE.conn, inc_id, row["plan_hash"], "approved")
+        _PENDING.pop(inc_id, None)
+    return _result(n, res)
 
 
 @app.post("/api/drive/{n}/flake")
