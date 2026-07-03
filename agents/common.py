@@ -27,6 +27,12 @@ BADGE_INNOVATIONLAB = "![tag:innovationlab](https://img.shields.io/badge/innovat
 BADGE_HACKATHON = "![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)"
 BADGES = f"{BADGE_INNOVATIONLAB}\n{BADGE_HACKATHON}"
 
+# The Agentverse profile README (carries BOTH mandatory badges above). Each agent passes
+# it as Agent(readme_path=README_PATH, publish_agent_details=True) so a plain re-run
+# publishes the badges to that agent's profile (Fetch hard gate). Absolute path — stable
+# regardless of the directory the agent is launched from.
+README_PATH = os.path.join(os.path.dirname(__file__), "README.md")
+
 # Env var names holding the STABLE production seeds (filled at registration; never committed).
 SEED_ENV = {
     "watcher": "WATCHER_AGENT_SEED",

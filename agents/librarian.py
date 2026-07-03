@@ -79,6 +79,9 @@ def build_librarian() -> Agent:
         name=AGENT_NAME,
         seed=common.resolve_seed("librarian"),
         mailbox=common.use_mailbox(),
+        description=DESCRIPTION,
+        readme_path=common.README_PATH,      # both badges → Agentverse profile (Fetch gate)
+        publish_agent_details=True,
     )
 
     @PRECEDENT_PROTOCOL.on_message(TriageMsg)

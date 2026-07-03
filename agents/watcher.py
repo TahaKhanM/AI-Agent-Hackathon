@@ -82,6 +82,9 @@ def build_watcher(reply=None) -> Agent:
         name=AGENT_NAME,
         seed=common.resolve_seed("watcher"),
         mailbox=common.use_mailbox(),
+        description=DESCRIPTION,
+        readme_path=common.README_PATH,      # both badges → Agentverse profile (Fetch gate)
+        publish_agent_details=True,
     )
     watcher.include(build_chat_protocol(reply), publish_manifest=True)
     return watcher
