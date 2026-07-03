@@ -50,3 +50,12 @@ logs/
 
 # Regenerable analysis artifacts
 data/analysis/*.pkl
+
+# Regenerable runtime artifacts (rebuilt by `make sim` / `make demo-reset`)
+data/sim.db
+data/sim.db-*
+data/precedent.db
+data/precedent.db-*
+data/cache/
+*.sqlite
+*.sqlite-*

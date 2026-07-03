@@ -32,9 +32,10 @@ lint:
 secrets-scan:
 	gitleaks detect --source . --log-opts="--all" --redact -v
 
-# --- TODO targets: wired by the build teams (see Plan/BUILD-PLAN.md §4) ---
+# Boot the MediaCo sim (:8100) + the judge console (:8000) sharing the demo dbs.
+# T1's driver streams the live trace to the console (see scripts/drive_incident.py).
 sim:
-	@echo "TODO (T1/T2): uvicorn sim.app:app --reload  +  console"; exit 1
+	$(PY) scripts/run_demo.py
 
 # T2 judge console — runs standalone on the seeded local-demo state (no T1 needed).
 console:
@@ -45,7 +46,7 @@ jira-smoke:
 	PRECEDENT_LIVE_JIRA_SMOKE=1 $(PY) scripts/jira_smoke.py
 
 demo-reset:
-	@echo "TODO (T1): reset sim SQLite from fixture snapshot, zero memory counters, reset ladder"; exit 1
+	$(PY) scripts/demo_reset.py
 
 bench:
 	@echo "TODO (T3): python -m precedent_memory.bench.conformance_bench -> precedent_memory/bench/RESULTS.md"; exit 1

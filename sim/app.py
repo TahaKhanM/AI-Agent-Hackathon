@@ -1,23 +1,59 @@
-"""MediaCo simulated services.  [STUB — owner T1, task T1-2]
+"""MediaCo simulated services — one FastAPI app, one SQLite file.
 
 Spec: Idea/refinement/01-realistic-data-plan.md + 02 §4.3.
 
-One FastAPI app, 4 routers (scheduler / rights / publisher / kb), one SQLite file,
-seeded from committed raw public data (TVmaze GB CC BY-SA, Freeview XMLTV, CC0 Kaggle
-catalogs, UCI incident log). KEEP the real data's messiness (null metadata, duplicate
-titles) — it triggers incidents and is what the Conduct rubric rewards; do not sanitise.
+Dumb MediaCo infrastructure: it stores operational objects (channels, programmes,
+schedule slots, EPG payloads, VOD items, rights records, KB articles) seeded from
+committed real public data, and applies TYPED fixes toward a healthy state. There is NO
+LLM, NO model id, and NO permission / risk / ACL logic here — the orchestrator decides
+*whether* to call these typed tools; the sim only stores and mutates.
 
-Endpoints the demo script needs: fixed-seed incident fixtures (1/2/3 replay identically),
-POST /sim/publisher/flake?once=true (the recovery beat), and the 2 restricted runbook
-issues seeded with issue-security level (IDs in .env). make demo-reset resets state <30s.
+KEEP the real data's messiness (null metadata, duplicate titles across catalogs, fuzzy
+match failures) — it triggers the incidents and is what the Conduct rubric rewards.
+
+Airplane-mode: loads only from committed files under data/raw and data/kb. No network.
+Deterministic: sim.incidents.SEED drives every random choice so incidents 1/2/3 replay
+byte-identically.
 """
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
-app = FastAPI(title="MediaCo (Precedent sim)")
+from sim import core, db
+from sim.routers import browse, incident, objects
+
+
+@asynccontextmanager
+async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    """Build the sim (idempotent) on boot so the app is usable immediately."""
+    conn = db.connect()
+    try:
+        core.build_sim(conn)
+    finally:
+        conn.close()
+    yield
+
+
+app = FastAPI(title="MediaCo (Precedent sim)", lifespan=_lifespan)
+
+app.include_router(incident.router)
+app.include_router(objects.router)
+app.include_router(browse.router)
 
 
 @app.get("/health")
-def health():
-    return {"status": "stub", "todo": "T1-2: seed from data/raw, wire 4 routers — see 01 + 02 §4.3"}
+def health() -> dict:
+    conn = db.connect()
+    try:
+        core.build_sim(conn)  # idempotent guard so /health works even pre-startup
+        counts = db.counts(conn)
+    finally:
+        conn.close()
+    return {
+        "status": "ok",
+        "db": db.db_path(),
+        "counts": counts,
+    }
