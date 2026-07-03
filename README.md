@@ -9,6 +9,7 @@ Precedent is an agent that detects an enterprise incident, retrieves the **docum
 Built for the **UK AI Agent Hackathon EP5** across three tracks — Conduct ("Make Legacy Move"), Fetch.ai (Agentverse / Agent Chat Protocol / ASI:One), and BasedAI (permission-aware memory governance).
 
 > **▶ Team, start here: [`GETTING-STARTED.md`](GETTING-STARTED.md)** — setup in ~10 minutes and your first task, per person.
+> **New to the project?** Read it in plain words first: [`EXPLAINER-idea-and-plan.md`](EXPLAINER-idea-and-plan.md) (the what and the how) and [`EXPLAINER-roles.md`](EXPLAINER-roles.md) (who does what, thoroughly, no jargon).
 
 ## Hard rules (do not break)
 
