@@ -66,6 +66,16 @@ set +a
   - Kaggle CLI is not installed in the local shell right now.
   - If using older Kaggle tooling, also fill `KAGGLE_USERNAME` and `KAGGLE_KEY`.
 
+## Local dev tooling (set up + verified 3 Jul)
+
+- Repo scaffolded: `pyproject.toml` (uv), `Makefile`, `.env.example` (Venice-only), `LICENSE` (MIT), `scripts/check_open_weight.sh`, package skeletons (`precedent/`, `precedent_memory/`, `sim/`, `console/`, `agents/`) with spec-pointing stubs, and `precedent/models.py` + `precedent_memory/schema.sql` + spec test skeletons already implemented.
+- `uv` 0.11 present; `.venv` created (Python 3.13). `uv pip install -e ".[dev]"` resolves; `uv pip install -e ".[dev,agents]"` adds the Fetch rails.
+- **`uagents` 0.25.2 verified on Python 3.13** — the Chat Protocol canonical import works; the agents worktree needs no separate runtime.
+- `gitleaks` 8.30.1 installed; full-history scan run — **clean, no leaks** (repo safe to make public after the scrub gate).
+- `make` targets: `check-open-weight` (rule-1 CI guard — passing), `test` (4 smoke pass / 9 spec skip), `secrets-scan`, `lint` (ruff clean); `sim`/`demo-reset`/`bench` are TODO stubs for the build teams.
+- Project skill at `.claude/skills/precedent/SKILL.md` (the four hard rules + layout + gate discipline).
+- MCP note: the MCP registry returned no matching connectors for github/jira here, and new authenticated MCPs can't be connected from a non-interactive session. The Playwright MCP is already connected (useful for console UI testing). If the team wants GitHub automation for the BasedAI PR, connect a GitHub MCP/token via an interactive `claude mcp` session — otherwise the PR stays a human task (owner T3, packet `Plan/workflows/T3-github-publication.md`).
+
 ## No-key public data/tools
 
 - TVmaze schedule API: no auth required.

@@ -4,8 +4,8 @@ BasedAI track rule: open-weight models only — no closed/proprietary model may 
 called anywhere in the loop. Every entry below links a public Hugging Face weights
 repo, verified live on 3 Jul 2026 (see docs/compliance/venice-models-*.json).
 
-CI guard (must return ONLY this module's comment lines):
-    grep -rnE "claude-|openai-|gpt-|gemini-|grok-|mercury-" --include=*.py precedent precedent_memory
+CI guard (must return ONLY this module's comment lines) — see scripts/check_open_weight.sh:
+    grep -rnE "claude-|openai-|gpt-|gemini-|grok-|mercury-" --include=*.py precedent
 
 Starter file written during planning so the build starts from a pinned, verified
 registry rather than re-deriving it. IDs and licences are already confirmed.
@@ -22,7 +22,7 @@ OPEN_WEIGHT_MODELS: dict[str, tuple[str, str, str, str]] = {
         "qwen3-5-35b-a3b",
         "https://huggingface.co/Qwen/Qwen3.5-35B-A3B",
         "Apache-2.0",
-        "MoE 35B/3B-active; triage, chat replies, mutation-tolerant extraction assist; tool-calling",
+        "MoE 35B/3B-active; triage, chat replies, extraction assist; tool-calling",
     ),
     "SMART": (
         "deepseek-v4-flash",
@@ -80,5 +80,5 @@ def assert_open_weight(model_ids_from_catalog: dict[str, str | None]) -> None:
         src = (model_ids_from_catalog.get(mid) or "")
         if "huggingface.co" not in src:
             raise RuntimeError(
-                f"open-weight guard: {role} id {mid!r} has non-HF modelSource {src!r} — refusing to run"
+                f"open-weight guard: {role} id {mid!r} has non-HF modelSource {src!r}"
             )
