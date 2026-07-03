@@ -86,3 +86,23 @@ def test_bm25_ranks_relevant_doc_first():
     ranked = bm25.rank("epg publish failed missing metadata", corpus, top_k=1)
     assert ranked[0][0] == 1  # the EPG-publish doc
     assert ranked[0][1] > 0
+
+
+def test_demo_retrieval_path_imports_no_embedding_backend():
+    """The demo makes ZERO embedding calls: retrieval enforces ACLs by structured equality
+    and never imports the model backend (rule 2 + airplane-mode)."""
+    import pathlib
+    src = (pathlib.Path(__file__).resolve().parent.parent
+           / "precedent_memory" / "retrieve.py").read_text()
+    assert "venice" not in src and "import" in src
+    assert "embed" not in src.lower()
+
+
+def test_committed_kb_embeddings_are_present_and_well_formed():
+    import json
+    import pathlib
+    p = pathlib.Path(__file__).resolve().parent.parent / "data" / "embeddings" / "kb_vectors.json"
+    assert p.exists(), "precomputed KB vectors must be committed (build-time artifact)"
+    d = json.loads(p.read_text())
+    assert d["count"] == 10 and d["dim"] > 0
+    assert len(d["entries"]) == 10 and all(e.get("vector") for e in d["entries"])
