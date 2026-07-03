@@ -1,0 +1,163 @@
+==============================================================
+Guild: UK AI Agent Hackathon
+Channel: Conduct / conduct-announcement
+==============================================================
+
+[27/06/2026 22:31] mingthemerciless7272
+One of the huge pot dropping!
+Here comes our conduct bounty:
+
+
+[27/06/2026 22:31] mingthemerciless7272
+
+
+{Attachments}
+https://cdn.discordapp.com/attachments/1518803595775049850/1520542159240167494/image.png?ex=6a482a3d&is=6a46d8bd&hm=f107e934e5663e23e25a3bee2d5d19a750de9c46d33b3fd0b3d419487df0c8e1&
+
+
+[27/06/2026 22:31] mingthemerciless7272
+Conduct Track: Make Legacy Move
+
+The problem
+Large enterprises run on custom software built up over decades. When the business needs to change (a new pricing model, a new regulation, a new market) the software has to change too. But that software is millions of lines deep, with little documentation and few people who still understand how it works.
+So a change that should take days takes months. Teams of consultants are hired, budgets run into the millions, and a few specialists become the bottleneck for the whole company. Closing this gap is what Conduct does. For this track, we want you to take it on, too.
+
+Your mission
+Pick a slow, inefficient process that happens at large enterprises today, and build a tool that lets a user do it far faster with AI, while staying in control. Start with the process. Use your knowledge of an industry, articles, or people who've worked in it to identify a specific task that enterprise teams spend weeks on. Then build something that does it in hours.
+The key design choice: don't let the agent do everything on its own. In an enterprise, a fully autonomous agent is a non-starter. What works is keeping the user in control, with:
+A clear interface that shows what the agent is doing and why. Step-by-step execution that the user can follow, approve, or adjust.Real constraints on what the agent can change on its own. The goal isn't to replace the expert. It's to make them ten times faster while they stay at the wheel.
+
+What we're looking for
+A real process. A task enterprise teams genuinely struggle with today, not one you invented for the demo. The user stays in control. Visibility into every step, the ability to work piece by piece, and clear limits on the agent. Control beats autonomy. A credible scale story. You won't have a real enterprise system to test on, and that's fine. Show you've thought about how this holds up on something far bigger and messier.
+
+Getting started
+To make your demo convincing, work with realistic data rather than something you made up. You don't need anything corporate: publicly available data works fine as stand-in "enterprise" data. A large open-source codebase on GitHub, a dataset from Kaggle, or any sizeable real-world data source all work well. The bigger and messier, the better the story.
+No enterprise experience required. The hard part is picking the right process, which anyone can do.
+
+Show us how AI lets a business change its systems as fast as it changes its mind.
+
+
+[27/06/2026 22:32] mingthemerciless7272
+Judging criteria
+Technical execution (35%): Does it actually work, reliably, on messy and ambiguous inputs, and recover from errors instead of only running in a scripted demo? We want real engineering, not a wrapper around a prompt.
+
+Impact & speed-up (30%): How dramatic is the improvement on a real, slow enterprise process? The strongest entries take something that takes a team weeks and make it happen in hours, with a clear sense of the time, cost, or expertise saved.
+
+User stays in control (20%): Does the user have visibility into every step, the ability to work through the process piece by piece, and clear limits on what the agent does on its own? A fully autonomous agent is a non-starter in an enterprise. Control beats autonomy.
+
+The demo (20%): Is there a clear, live before/after that a non-engineer can grasp in 90 seconds? A well-presented interface that makes the value obvious counts for a lot.
+
+
+[27/06/2026 22:32] mingthemerciless7272
+Price pool is 8,000 £
+
+
+[27/06/2026 22:33] mingthemerciless7272
+The price pool is for the first three places, btw. The exact distribution we will announce soon
+
+
+[27/06/2026 22:43] mingthemerciless7272
+
+
+{Attachments}
+https://cdn.discordapp.com/attachments/1518803595775049850/1520545055834767393/Conduct_Track_Make_Legacy_Move_Original_Formatted.pdf?ex=6a482cef&is=6a46db6f&hm=e1742ea38dc58273fb55fece4ea45311afd83f582133314beff471825df6e9e5&
+
+
+[28/06/2026 19:33] jpconduct_89186
+Hey everyone! 👋
+
+Quick one from the Conduct side: we're hosting an exclusive side event just for you all during this hackathon 🔥
+
+Our co-founder & CTO Henry will do a fireside chat on what it really takes to build a startup from zero, from turning an idea into a product and winning the first customers, to building a team and raising a $60M Series A with Index & ICONIQ. The unfiltered version, the hard calls, and the lucky breaks.
+
+Afterwards, we head to a nearby pub for drinks & networking with members of the Conduct team 🎉
+
+🗓️ Monday, 29 June | 18:00 | Imperial College London
+
+RSVP here 👉 https://luma.com/64ed4no2
+
+Would love to see you there! 🙌
+
+{Embed}
+https://luma.com/64ed4no2
+Conduct Side Event for UK AI Agent Hackathon: Fireside Chat with a ...
+🔥 An exclusive side event for participants of the UK AI Agent Hackathon EP5 at Imperial College London: a fireside chat with Henry Thompson, co-founder & CTO…
+https://images-ext-1.discordapp.net/external/gvGvCivyCdhweX_N0P0w1sRpgVjbMQyYI7adQvADbYM/%3Fcalendar_avatar%3Dhttps%253A%252F%252Fimages.lumacdn.com%252Fuploads%252Fy9%252F450c8382-bfee-4c7d-afdf-d4abee6d2140.jpg%26calendar_name%3DConduct%26color0%3D%2523130f0b%26color1%3D%2523744e28%26color2%3D%2523b8a993%26color3%3D%2523f7f3f0%26host_avatar%3Dhttps%253A%252F%252Fcdn.lu.ma%252Favatars-default%252Favatar_39.png%26host_name%3DJan-Philipp%2520Groth%26img%3Dhttps%253A%252F%252Fimages.lumacdn.com%252Fuploads%252F1b%252F9e3620ec-ee18-43f4-80ae-b5cac39fb11c.jpg%26name%3DConduct%2520Side%2520Event%2520for%2520UK%2520AI%2520Agent%2520Hackathon%253A%2520Fireside%2520Chat%2520with%2520a%2520%252460M-Backed%2520Founder%252C%2520plus%2520drinks%2520%2526%2520networking%26palette_neutral%3D%2523130f0b%253A13.56%252C%2523f7f3f0%253A3.61%26palette_vibrant%3D%2523744e28%253A12.05%252C%2523b8a993%253A6.77/https/og.luma.com/cdn-cgi/image/format%3Dauto%2Cfit%3Dcover%2Cdpr%3D1%2Canim%3Dfalse%2Cbackground%3Dwhite%2Cquality%3D75%2Cwidth%3D800%2Cheight%3D420/event
+
+{Reactions}
+🥂 (2)
+
+[29/06/2026 14:24] jpconduct_89186
+Hey everyone 👋
+
+Conduct and Legora are hosting an event for engineers in London, and it's a great fit for a lot of you here.
+
+July 8 in Shoreditch. Fireside chat with Legora CTO Jake Lauritzen and people from both teams, then retro arcade games, drinks and food. No pitch decks, no lanyards, just a room full of people who build things talking about building things.
+
+Who's it for? Software engineers in London, whether you're actively looking for something new or just curious about what we're working on.
+
+Spots are free but limited. Sign up here: https://luma.com/legora-kojr
+
+Would love to see some of you there 🙌
+
+{Embed}
+https://luma.com/legora-kojr
+London Engineering Meetup - Legora x Conduct · Luma
+Join us for an evening bringing together engineers from across London's tech community.
+We're Legora and Conduct, two AI companies building products we're…
+https://images-ext-1.discordapp.net/external/9S6YOf_fk7cSobzjibCL8KF77YvFdNi-q2W6A48rbmE/%3Fcalendar_avatar%3Dhttps%253A%252F%252Fimages.lumacdn.com%252Fuploads%252F1b%252F12ea0f4a-ea47-4406-a35b-76a849e1260b.png%26calendar_name%3DLegora%26color0%3D%2523010927%26color1%3D%2523345c51%26color2%3D%2523feffff%26color3%3D%2523909f5f%26host_avatar%3Dhttps%253A%252F%252Fcdn.lu.ma%252Favatars-default%252Favatar_15.png%26host_name%3DTom%2520Pattison%26img%3Dhttps%253A%252F%252Fimages.lumacdn.com%252Fuploads%252Faz%252F4b8dd6b9-6424-4e90-953a-e875b7ce66cc.png%26name%3DLondon%2520Engineering%2520Meetup%2520-%2520Legora%2520x%2520Conduct%26palette_neutral%3D%2523010927%253A53.16%252C%2523feffff%253A2.42%26palette_vibrant%3D%2523345c51%253A12%252C%252365aa76%253A1.61%252C%2523909f5f%253A0.36/https/og.luma.com/cdn-cgi/image/format%3Dauto%2Cfit%3Dcover%2Cdpr%3D1%2Canim%3Dfalse%2Cbackground%3Dwhite%2Cquality%3D75%2Cwidth%3D800%2Cheight%3D420/event
+
+
+[29/06/2026 15:55] jpconduct_89186
+Hey everyone 👋
+
+If you're taking on our Conduct track, come join our WhatsApp group:
+
+https://chat.whatsapp.com/Ibn3YMi3uHeKeYUNNXu76Y?mode=gi_t
+
+We set up this group so your questions about the track don't get lost in the main chat. People from the Conduct team are in there and ready to help you directly, whether it's about the track itself or you're stuck on something and need a hand.
+
+Drop your questions anytime, we're here for you. Good luck!
+
+
+[30/06/2026 15:28] jpconduct_89186
+Hi everyone,
+
+Thank you so much for coming out yesterday! 🙌 We were thrilled to see so many of you at the fireside chat, and it was great to keep the conversation going with you at the pub afterwards. We got a lot of wonderful feedback, which means a lot to us. 🙏
+
+We'd love to keep the momentum going, so we're inviting you to our office in Fitzrovia this Thursday for an evening of feedback, food, and good conversation. 🍽️ It's the perfect chance to get hands-on input on your hackathon projects and talk directly with the team before the final push.
+
+What to expect:
+- Office visit from 6:30 PM, open end
+- Buffet and drinks 🍕🍻
+- Live feedback on your projects
+- Direct conversations with the Conduct team
+
+Spots are limited to 40 people, so grab yours early here: https://luma.com/4dffwgcf 🚀
+
+Looking forward to seeing you there! 😄
+
+Best,
+JP
+
+{Embed}
+https://luma.com/4dffwgcf
+Open House @ Conduct: Office Visit, Buffet & Project Talk · Luma
+Building something in our track? Come work through it with us.
+We're inviting hackathon participants from the Conduct track to our office in Fitzrovia for an…
+https://images-ext-1.discordapp.net/external/DOcQzXXi5O2n8eGHHNqjEiRyQQqINodTWS5hPM0hvTA/%3Fcalendar_avatar%3Dhttps%253A%252F%252Fimages.lumacdn.com%252Fuploads%252Fy9%252F450c8382-bfee-4c7d-afdf-d4abee6d2140.jpg%26calendar_name%3DConduct%26color0%3D%2523c9c09b%26color1%3D%2523211f25%26color2%3D%2523eaeaea%26color3%3D%252394b5bc%26host_avatar%3Dhttps%253A%252F%252Fcdn.lu.ma%252Favatars-default%252Favatar_39.png%26host_name%3DJan-Philipp%2520Groth%26img%3Dhttps%253A%252F%252Fimages.lumacdn.com%252Fuploads%252F3y%252F2ae32ce1-fdb2-47be-9444-3f3276d51cc0.jpg%26name%3DOpen%2520House%2520%2540%2520Conduct%253A%2520Office%2520Visit%252C%2520Buffet%2520%2526%2520Project%2520Talk%26palette_neutral%3D%2523211f25%253A14.87%252C%2523eaeaea%253A7.89%26palette_vibrant%3D%2523c9c09b%253A21.34%252C%252394b5bc%253A5.77%252C%25238a9e86%253A3.01/https/og.luma.com/cdn-cgi/image/format%3Dauto%2Cfit%3Dcover%2Cdpr%3D1%2Canim%3Dfalse%2Cbackground%3Dwhite%2Cquality%3D75%2Cwidth%3D800%2Cheight%3D420/event
+
+
+[30/06/2026 17:09] mingthemerciless7272
+Quick one on submissions for our Conduct track. Same deal as the other sponsors. We'd like participants to submit:
+
+1.⁠ ⁠GitHub repo: link with code, setup instructions and any relevant docs.
+2.⁠ ⁠Pitch deck: problem, solution, product, tech, use case, demo flow, and any other slide they find useful.
+3.⁠ ⁠Demo / pitch video.
+
+Length of the deck and video is totally up to the teams, but please keep both short and snappy. We just want to quickly get the problem they're solving and the wow moment they can create for enterprise teams.
+
+
+==============================================================
+Exported 12 message(s)
+==============================================================
