@@ -1,0 +1,102 @@
+# Precedent risk-policy pack — the DETERMINISTIC gate (rule 2). No LLM writes here.
+# Keyed by class_key "service|error_code|target_object_type". Each rule sets the risk
+# class, a stable policy_rule_id, the ladder CEILING (max autonomy policy permits for the
+# class — the live class_ladder state may be lower), the typed action, and the lineage
+# source refs a memorised fix must carry (must match seeded acl_source refs).
+#
+# A class NOT listed here degrades to `default` (L1, human approval) — never auto.
+version: 1
+
+default:
+  risk_class: unclassified
+  policy_rule_id: DEGRADE-DEFAULT-L1
+  ladder_ceiling: L1
+  action_type: none
+  lineage_refs: []
+
+# When extraction is not deterministic-confirmed (llm_proposed / None), assess() forces
+# this cap regardless of the class ceiling.
+degraded_cap:
+  risk_class: unverified_extraction
+  policy_rule_id: DEGRADE-CAP-L1
+  ladder_ceiling: L1
+
+classes:
+  "publisher|PUB-4012|schedule_item":
+    risk_class: standard_change
+    policy_rule_id: PUB-4012-REPUBLISH
+    ladder_ceiling: L2            # first-occurrence L1; can graduate toward Standing Approval
+    action_type: republish_epg
+    lineage_refs: ["kb:KB-0001"]
+
+  "scheduler|SCH-DUP-002|schedule_item":
+    risk_class: standard_change
+    policy_rule_id: SCH-DUP-002-DEDUPE
+    ladder_ceiling: STANDING       # the fast-path repeat class (graduates to Standing Approval)
+    action_type: dedupe_slot
+    lineage_refs: ["jira:MEDIA-113"]
+
+  "rights|RGT-EXCL-009|vod_item":
+    risk_class: restricted_change
+    policy_rule_id: RGT-EXCL-009-TAKEDOWN
+    ladder_ceiling: L1             # rights-ops human approval only; never auto (restricted)
+    action_type: rights_takedown
+    lineage_refs: ["kb:KB-0004", "jira:MEDIA-113"]
+
+  "scheduler|SCH-DST-118|schedule_item":
+    risk_class: standard_change
+    policy_rule_id: SCH-DST-118-OFFSET
+    ladder_ceiling: L2
+    action_type: dedupe_slot
+    lineage_refs: ["kb:KB-0001"]
+
+  "scheduler|SCH-OVL-204|schedule_item":
+    risk_class: standard_change
+    policy_rule_id: SCH-OVL-204-DEDUPE
+    ladder_ceiling: L2
+    action_type: dedupe_slot
+    lineage_refs: ["kb:KB-0001"]
+
+  "rights|RGT-WIN-014|vod_item":
+    risk_class: restricted_change
+    policy_rule_id: RGT-WIN-014-TAKEDOWN
+    ladder_ceiling: L1
+    action_type: rights_takedown
+    lineage_refs: ["kb:KB-0004"]
+
+  "endpoint|EPT-BOOT-291|endpoint_host":
+    risk_class: standard_change
+    policy_rule_id: EPT-BOOT-291-RECOVER
+    ladder_ceiling: L1
+    action_type: none
+    lineage_refs: ["kb:KB-0001"]
+
+  "publisher|PUB-JOB-503|publish_job":
+    risk_class: standard_change
+    policy_rule_id: PUB-JOB-503-REQUEUE
+    ladder_ceiling: L2
+    action_type: republish_epg
+    lineage_refs: ["kb:KB-0001"]
+
+  # Escalate-class: no safe admin fix (KB-0010) — routes to a human, never executes.
+  "auth|AUTH-CAP-900|auth_service":
+    risk_class: escalate
+    policy_rule_id: AUTH-CAP-900-ESCALATE
+    ladder_ceiling: ESCALATE
+    action_type: none
+    lineage_refs: ["kb:KB-0001"]
+
+  # Stale-runbook classes degrade to L1 (the agent flags staleness at retrieval).
+  "publisher|PUB-SUB-410|subtitle_asset":
+    risk_class: standard_change
+    policy_rule_id: PUB-SUB-410-STALE-L1
+    ladder_ceiling: L1
+    action_type: none
+    lineage_refs: ["kb:KB-0001"]
+
+  "scheduler|SCH-ASR-330|as_run_log":
+    risk_class: standard_change
+    policy_rule_id: SCH-ASR-330-STALE-L1
+    ladder_ceiling: L1
+    action_type: none
+    lineage_refs: ["kb:KB-0001"]
