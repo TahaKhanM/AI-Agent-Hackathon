@@ -11,6 +11,17 @@
 | **Median resolution for precedented repeats** | **18.2 h** (calendar) | "Even when the fix class had precedent, the median repeat incident still took 18.2 hours to resolve — 36% breached SLA and 47% were reassigned at least once. Retrieval, not resolution, is the bottleneck." (p75 = 136.6 h; first-of-class median = 92.1 h) |
 | **Ladder bootstrap coverage** | **558 classes ≥4 occurrences → 94.8% of volume** | "The autonomy ladder isn't hypothetical: 558 fix classes recur 4+ times and cover 95% of all incident volume — those are standing-approval candidates on day one." (301 classes ≥10 → 88.6%) |
 
+## Arrival-time precision (added after judge round 2 — the answer to "what could you match at arrival?")
+
+Naive baseline using ONLY symptom fields (category+subcategory) available at arrival, predicting the prior fix class, over 24,470 evaluable incidents (chronological, precedent counted only if earlier in time):
+
+| Predictor | Top-1 | Top-3 |
+|---|---|---|
+| Most-common prior fix class in the symptom class | **59.4%** | **87.7%** |
+| Most-recent prior fix class | 47.4% | — |
+
+Framing: *"Before any product intelligence, the right fix is on the operator's first screen ~88% of the time — and the 59% top-1 is exactly why standing-approval execution requires extractor-confirmed fingerprint equality, never rank-1 similarity."* This is a **floor** (naive frequency baseline, coarse public-corpus fields), not a product accuracy claim — label it as such.
+
 ## Numbers to use with care (or not at all)
 
 - **knowledge=true median 74.6 h vs 8.6 h for knowledge=false** (n=3,358 true, 14.25% of incidents). The *planned* framing in 01-realistic-data-plan §5.2 ("documented fix existed → still slow") does NOT survive contact with the data as originally worded — `knowledge` flags whether a KB doc *was used in resolution*, and doc-using incidents are 9× slower, most plausibly because harder incidents drive people to the KB (causal confound). Permitted framing (colour only, never a headline): *"in the corpus, incidents where staff had to reach for a knowledge document took a median of 74.6 hours — the lookup path is the slow path"* — and acknowledge the confound if probed. NEVER present it as "documented fix → faster" or "documented fix → slower" causally.

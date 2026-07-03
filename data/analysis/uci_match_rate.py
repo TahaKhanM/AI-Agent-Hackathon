@@ -39,3 +39,22 @@ print("median res_h first-of-class:", round(ok[~ok["matched_prior"]]["res_h"].me
 print("SLA breach share (precedented):", round((ok[ok["matched_prior"]]["made_sla"] == False).mean(), 3))
 print("reassigned>0 share (precedented):", round((ok[ok["matched_prior"]]["reassignment_count"] > 0).mean(), 3))
 print("classes >=4 occurrences:", (cc >= 4).sum(), "covering", round(cc[cc >= 4].sum() / len(v) * 100, 1), "%")
+
+# --- Arrival-time top-1/top-3 precedent precision (added after judge round 2) ---
+from collections import defaultdict, Counter
+
+hist, hist_last = defaultdict(Counter), {}
+modal1, recent1, top3, n = 0, 0, 0, 0
+for _, row in v.iterrows():
+    s, f = row["sfp"], row["fp"]
+    if hist[s]:
+        n += 1
+        ranked = [k for k, _ in hist[s].most_common(3)]
+        if ranked[0] == f: modal1 += 1
+        if f in ranked: top3 += 1
+        if hist_last[s] == f: recent1 += 1
+    hist[s][f] += 1
+    hist_last[s] = f
+print("arrival-time top-1 (modal prior):", round(100 * modal1 / n, 1), "%")
+print("arrival-time top-1 (most recent):", round(100 * recent1 / n, 1), "%")
+print("arrival-time top-3 (modal prior):", round(100 * top3 / n, 1), "%")

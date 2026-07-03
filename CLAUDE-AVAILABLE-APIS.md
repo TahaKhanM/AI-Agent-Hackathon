@@ -33,7 +33,7 @@ set +a
     - SMART: `deepseek-v4-flash` (deepseek-ai/DeepSeek-V4-Flash, MIT)
     - HEAVY: `deepseek-v4-pro` (deepseek-ai/DeepSeek-V4-Pro, MIT)
     - EMBED: `text-embedding-bge-m3` (BAAI/bge-m3, MIT) — embedding models only appear under `GET /models?type=embedding`
-  - Caution (verified live): Venice also serves closed models incl. `claude-fable-5`, `grok-4-3`, `gemini-3-5-flash`, and closed embedders `text-embedding-3-small/large` + `gemini-embedding-2-preview`. Closed models have `model_spec.modelSource = null`; open ones carry the HF URL — the registry whitelist must cover embeddings too.
+  - Caution (verified live): Venice also serves closed models incl. `claude-fable-5`, `grok-4-3`, `gemini-3-5-flash`, and closed embedders `text-embedding-3-small/large` + `gemini-embedding-2-preview`. NOTE: closed models do NOT reliably have `modelSource = null` (grok/gemini/qwen-plus carry vendor-doc URLs) — the safe guard is asserting `modelSource` is a `huggingface.co` URL; the registry whitelist must cover embeddings too.
   - Fallback bench corrections: `llama-4-maverick` does NOT exist on Venice; `qwen-3-6-27b` is actually `qwen3-6-27b`. Verified present: `zai-org-glm-5-2` (MIT), `kimi-k2-7-code` (Moonshot licence "other"), `text-embedding-qwen3-0-6b`, `text-embedding-qwen3-8b`.
 
 - ASI:One API

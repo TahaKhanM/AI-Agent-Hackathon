@@ -85,3 +85,22 @@ Tier A1 unconditional ≈ +18.5 ph (conformance bench, 6/6 attacks, extractor me
 - **[Blocking, Fri] The build itself** — 13:00/17:00 checkpoints + 18:00 vertical-slice gate are the enforcement mechanism.
 - **[Human] Team slide + post-Saturday intent + practitioner outreach (or delete the line); 2nd Jira seat invite; Gautam courtesy confirm.**
 - **[Sat 07:00–09:30] Bench results into the PR; rehearsal gates; 22:00-branch execution.**
+
+## Session 2, Round 2 (fresh judges, v5 state) — final scores & stop decision
+
+| Judge | v4 baseline | S2-R1 | S2-R2 (final) |
+|---|---|---|---|
+| Conduct | 79 | 81 | **81** |
+| Fetch.ai | 80 | 74 | **71** |
+| BasedAI | 80 | 69 | **65** |
+| Technical | 80 | 73 | **74** |
+| VC | 79 | 77→74 | **74** |
+
+**Stop decision:** movement ≤4 points across two fresh rounds → converged per the anti-inflation rules; no third round. The v4 baseline and these scores are NOT comparable: v4 judges scored "if the build lands"; session-2 judges score "as it will exist at the deadline" with unbuilt work discounted. On like-for-like design quality the entry improved materially (Conduct's impact criterion is now "largely DONE — measured on real data"; the open-weight gate is PASS with committed evidence; the demo doctrine rated best-at-event). The residual discount is almost entirely **Friday build execution risk + the human layer** — things documents cannot close, only the team can.
+
+**Residual findings that remain open (ranked, with the honest reason each cannot be closed by documents):**
+1. **Zero product code / 38.5-ph Friday** — the build itself; checkpoints + decoupled bench are the mitigation, execution is the team's.
+2. **Team slide + full-time answer + any primary customer signal** (VC fatal both rounds) — human-only; 4 ph budgeted; the hardest VC question has no documented answer by design ("write it honestly or delete it").
+3. **ASI:One discoverability aging** (Fetch) — mitigated (hello-world Watcher in first 30 min, ≥10 interactions, insurance URL, honest fallback line) but ultimately not force-able; the gate may resolve only Saturday morning.
+4. **BasedAI deadline ambiguity** — mitigated (morning skeleton PR, pre-freeze numbers, mentor confirm) but the governing deadline is the sponsor's call, not ours.
+5. **BioVault** remains the purpose-built competitor; our conformance-shaped, live-ACL, real-corpus numbers are the counter — if they land before the freeze.

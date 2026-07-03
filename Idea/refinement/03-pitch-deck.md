@@ -238,7 +238,8 @@
 **Visual/layout:** Faces left (small, human), ask centre in the largest type on the slide, Moveworks kicker as the closing line — it is literally the last thing the room reads.
 
 **Speaker notes:**
-- Deliver the ask as a sentence, not a slide-read: *"We're taking Precedent to broadcast-ops design partners. We want two introductions from this room, and we're applying to Antler and EWOR with it."*
+- Deliver the ask as a sentence, not a slide-read: *"We want two introductions — to anyone running a 24/7 ops or NOC team; media is where we start, not where we stop — and we're applying to Antler and EWOR with this."*
+- **Capture mechanism (round-2 VC fix):** slide 12 carries a second QR / footer URL → a contact route (one-page site or `mailto:` with the deck attached); the same email goes in the DoraHacks BUIDL page header. The party-trick QR (Jira portal) is a different code — never confuse the two on stage.
 - If external validation landed (practitioner messages went out Friday): add one line — *"We put this in front of ‹N› ops engineers this week; every one of them said the refusal demo is what gets it past their CISO."* Only say it if true; drop cleanly if not.
 - Last words before Q&A: *"The second time is free."*
 
@@ -310,6 +311,10 @@ Layout: plain table, small type. Purpose: when any number is challenged, jump he
 - ‹3› agents registered on **Agentverse** (addresses on-slide), collaborating over uAgents Chat Protocol; Innovation Lab badge; agent stays live post-hackathon.
 - Full loop inside **ASI:One**: report incident in chat → plan + rollback → "approve" → Jira ticket transitions and closes → audit link. Public shared-chat URL: ‹link›.
 - Approval principal = Chat Protocol sender address, logged as the authorising identity.
+
+### A9 — Bottoms-up ACV (added after judge round 2: the "no customer evidence" partial answer)
+
+One arithmetic slide, every input already sourced: **1 MSP NOC** (Encompass-class, 1,200+ channels) × **tens of thousands of tickets/yr** × **60%+ repeat share** (ServiceNow, verified 3–0; our corpus says 94% precedented) × **$50 blended deflection value** (inside the $22–$104 MetricNet ladder) ⇒ **seven-figure ACV justification per site** — before counting downtime avoidance. Label every input with its source and vintage on-slide. If practitioner quotes landed (slide 12 outreach), they live here too. *This is the defensible answer to "what's your actual serviceable market, bottoms-up" — it does not replace primary customer evidence and should never pretend to.*
 
 ### A8 — Liability & regulated ops (VC Q&A)
 
