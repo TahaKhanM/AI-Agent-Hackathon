@@ -40,9 +40,11 @@ ACL source). No LLM in the permission or risk decision.
 - Conformance vs BasedAI's rubric: full green-tick table, **FNR 0 leaks / 5,219 deny-expected**,
   graded by an **independent oracle** (two implementations cross-checked, not self-graded).
 - **6/6** named adversarial attacks.
-- Extractor robustness: `[NEEDS-FACT: T1's single robustness number from the seed-4207 mutation
-  corpus — (correct_match + safe_degrade)/100, with false_fast_path = 0]`.
-- Realism: UCI **25k-record store** (never "141k events") — live P99 posted Saturday.
+- Extractor robustness (seed-4207 · 100-mutation corpus): **0 false-fast-paths / 100 (0.00%)** — no
+  messy ticket produced a wrong confident class that could fast-path a wrong fix — and **25/25
+  red-herring decoys resisted**. (Breakdown: correct-match 8 · safe-degrade 50 · conservative-degrade
+  42 · false-fast-path 0. Source: `precedent_memory/bench/extractor_robustness.json`, `make bench-extractor`.)
+- Realism: UCI **25k-record store** (24,918 incidents; never "141k events") — live P99 posted Saturday.
 
 ## Organizer-defined one-shot questions (COPY VERBATIM from the live form, then fill)
 
