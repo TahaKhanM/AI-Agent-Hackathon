@@ -48,7 +48,7 @@ demo-reset:
 	@echo "TODO (T1): reset sim SQLite from fixture snapshot, zero memory counters, reset ladder"; exit 1
 
 bench:
-	@echo "TODO (T3): python -m precedent_memory.bench.conformance_bench -> precedent_memory/bench/RESULTS.md"; exit 1
+	$(PY) -m precedent_memory.bench.conformance_bench
 
 # Pre-freeze guard (Fri 21:00): everything that must be true before recording.
 freeze-check: check-open-weight test secrets-scan
