@@ -48,6 +48,25 @@ def test_unparseable_llm_yields_none(monkeypatch):
     assert ext is None and method == "llm_proposed"
 
 
+def test_unknown_code_first_degrades_not_grabs_known_decoy():
+    """Red-herring resistance (RULE 2 / fail-closed): the FIRST well-formed code token is
+    authoritative. When it is an UNKNOWN code, the extractor must DEGRADE (return None)
+    rather than scan onward and grab a later KNOWN decoy — grabbing the decoy would be a
+    WRONG confident class (a false fast-path). PUB-4020 is unknown; PUB-4012 is the decoy."""
+    text = ("Publisher PUB-4020: schedule_item image asset failed validation for 20:00 on "
+            "Channel-1. (NB: earlier alert mentioned PUB-4012 — unrelated, ignore.)")
+    assert extractor._deterministic(text, None) is None      # did NOT grab the PUB-4012 decoy
+
+
+def test_known_code_first_still_resolves_ignoring_later_decoy():
+    """The common case is preserved: a KNOWN code first still fixes the class deterministically,
+    and a later decoy mention is ignored."""
+    text = ("Scheduler SCH-DUP-002 duplicate schedule_item on the 21:00 slot. "
+            "(NB: earlier alert mentioned PUB-4012 — unrelated, ignore.)")
+    ext = extractor._deterministic(text, None)
+    assert ext is not None and ext.error_code == "SCH-DUP-002"
+
+
 # --------------------------------------------------------------------------- #
 # Policy
 # --------------------------------------------------------------------------- #

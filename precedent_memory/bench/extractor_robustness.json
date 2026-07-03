@@ -1,0 +1,22 @@
+{
+  "conservative_degrade_pct": 42.0,
+  "correct_match_pct": 8.0,
+  "counts": {
+    "conservative_degrade": 42,
+    "correct_match": 8,
+    "false_fast_path": 0,
+    "safe_degrade": 50
+  },
+  "false_fast_path": 0,
+  "false_fast_path_pct": 0.0,
+  "headline": "0 false-fast-paths / 100 seed-4207 mutations (0.00%); 25/25 red-herring decoys resisted",
+  "n_mutations": 100,
+  "no_wrong_confident_class_pct": 100.0,
+  "recoverable_known_code_correct": 8,
+  "recoverable_known_code_rows": 8,
+  "red_herring_resistance_pct": 100.0,
+  "red_herring_resisted": 25,
+  "red_herring_total": 25,
+  "safe_degrade_pct": 50.0,
+  "seed": 4207
+}

@@ -82,8 +82,14 @@ def _deterministic(raw_text: str, structured: dict | None) -> Extracted | None:
             # honour an explicit structured target_object_type/service ONLY if consistent;
             # otherwise trust the code's canonical mapping.
             return Extracted(service=service, error_code=code, target_object_type=tot)
-    # 2) an exact known code appearing in the free text (no typo)
-    for m in _CODE_RE.finditer((raw_text or "").upper()):
+    # 2) the FIRST well-formed code token in the free text is authoritative. If it is a
+    #    KNOWN code, that fixes the class. If the first well-formed code is UNKNOWN, the
+    #    ticket is about an unrecognised incident -> DEGRADE (return None) rather than
+    #    scanning onward for a later known code: a later "known" code is almost always a
+    #    red-herring decoy ("earlier alert mentioned X — ignore"), and grabbing it would be
+    #    a WRONG confident class (a false fast-path). Fail-closed on the unknown-first code.
+    m = _CODE_RE.search((raw_text or "").upper())
+    if m:
         code = _norm_code(m.group(1))
         if code:
             service, tot = KNOWN_CODES[code]

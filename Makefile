@@ -2,18 +2,20 @@
 PY := .venv/bin/python
 PIP := uv pip
 
-.PHONY: help install check-open-weight test lint secrets-scan sim console jira-smoke demo-reset bench bench-uci live-drift freeze-check
+.PHONY: help install check-open-weight test lint secrets-scan sim console jira-smoke demo-reset bench bench-extractor bench-uci live-drift dryrun-watcher freeze-check
 
 help:
 	@echo "install          install core+dev deps into .venv (add agents extra separately)"
 	@echo "check-open-weight BasedAI guard: model names only in precedent/models.py"
-	@echo "test             pytest (spec skeletons skip until implemented)"
+	@echo "test             pytest (full suite)"
 	@echo "lint             ruff check"
 	@echo "secrets-scan     gitleaks full-history scan (must be clean before repo goes public)"
-	@echo "sim              run the MediaCo sim + console (TODO: T1/T2)"
+	@echo "sim              run the MediaCo sim (:8100) + judge console (:8000), T1 in-process"
 	@echo "console          run the T2 judge console on :8000 (standalone, seeded demo)"
-	@echo "demo-reset       reset sim state, memory, ladder in <30s (TODO: T1)"
-	@echo "bench            run the conformance bench -> precedent_memory/bench/RESULTS.md (TODO: T3)"
+	@echo "demo-reset       reset sim state, memory, ladder in <30s"
+	@echo "bench            run the conformance bench -> precedent_memory/bench/RESULTS.md"
+	@echo "bench-extractor  score the frozen extractor over the seed-4207 mutation corpus (robustness)"
+	@echo "dryrun-watcher   drive the live Watcher chat handler through the full loop, offline"
 	@echo "freeze-check     pre-freeze guard: open-weight + tests + secrets + placeholder grep"
 
 install:
@@ -51,6 +53,16 @@ demo-reset:
 bench:
 	$(PY) -m precedent_memory.bench.conformance_bench
 
+# Extractor robustness: run T1's FROZEN deterministic extractor over the seed-4207 mutation
+# corpus and write the ONE robustness number (false-fast-path MUST be 0) to
+# precedent_memory/bench/extractor_robustness.json — the source of truth the chip/slide/README/BUIDL cite.
+bench-extractor:
+	VENICE_BASE_URL="http://127.0.0.1:9/unreachable" $(PY) -m precedent.extractor_robustness
+
+# Drive the live Watcher chat handler through the full loop offline (report->gate->approve->execute).
+dryrun-watcher:
+	PRECEDENT_AGENTS_OFFLINE=1 $(PY) scripts/dryrun_watcher_chat.py
+
 # Saturday realism run (human): point the bench at the real UCI ~25k-record store.
 # Exits non-zero until the CSV is downloaded (see data/raw/SOURCES.md). "25k-record store".
 bench-uci:
@@ -62,6 +74,11 @@ live-drift:
 	$(PY) scripts/live_drift_ttc.py
 
 # Pre-freeze guard (Fri 21:00): everything that must be true before recording.
+# The placeholder grep is scoped to SHIPPABLE surfaces only (submission drafts + the bench
+# results table) — the internal Plan/Idea planning docs legitimately use ‹…› mail-merge tokens.
+# It matches a COMPLETE ‹…› token, so self-referential prose ("Ctrl-F for `‹`") never trips it.
+# [[WAIT:…]] sentinels are intentional on the PR-README until the human fills them, so they are
+# NOT failed here (the deck PDF export enforces its own zero-[[WAIT]] rule in the B6 sweep).
 freeze-check: check-open-weight test secrets-scan
-	@! grep -rn "‹" Plan Idea docs 2>/dev/null | grep -v "BUILD-PLAN\|working-notes\|pitch-deck\|03-pitch" || (echo "placeholder ‹ still present — fill or delete"; exit 1)
+	@! grep -rnE "‹[^›]*›" Prep/submissions precedent_memory/bench/RESULTS.md 2>/dev/null || (echo "unfilled ‹…› placeholder on a shippable surface — fill or delete"; exit 1)
 	@echo "freeze-check passed"
