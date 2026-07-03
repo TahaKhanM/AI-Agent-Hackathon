@@ -52,6 +52,19 @@ FALLBACK_BENCH: dict[str, list[str]] = {
     "embed": ["text-embedding-qwen3-0-6b", "text-embedding-qwen3-8b"],
 }
 
+# Local Ollama airplane-mode profile (T1-1). Open-weight tags served by a local
+# `ollama` daemon (OpenAI-compatible endpoint). These live HERE — the single
+# enforcement point — so no model name ever appears outside this module. All tags
+# are open-weight (none match the closed-model CI grep). Selected by
+# PRECEDENT_MODEL_BACKEND=local; the response cache + canned fallbacks make the
+# airplane rehearsal pass even when no daemon is running.
+LOCAL_MODELS: dict[str, str] = {
+    "FAST": "qwen3:8b",
+    "SMART": "qwen3:8b",
+    "HEAVY": "qwen3:8b",
+    "EMBED": "bge-m3",
+}
+
 # Dev-only proprietary escape hatch — NEVER set in demo/CI. Guards against a closed
 # model silently entering the pipeline.
 ALLOW_PROPRIETARY_DEV = os.environ.get("PRECEDENT_DEV_MODELS") == "unsafe-dev-only"
@@ -62,6 +75,11 @@ _ALLOWED_IDS = frozenset(v[0] for v in OPEN_WEIGHT_MODELS.values())
 def model_id(role: str) -> str:
     """Resolve a role to its pinned open-weight model id."""
     return OPEN_WEIGHT_MODELS[role][0]
+
+
+def local_model_id(role: str) -> str:
+    """Resolve a role to its local Ollama airplane-profile tag (open-weight)."""
+    return LOCAL_MODELS[role]
 
 
 def assert_open_weight(model_ids_from_catalog: dict[str, str | None]) -> None:

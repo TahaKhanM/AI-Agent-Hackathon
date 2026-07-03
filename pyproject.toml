@@ -19,6 +19,7 @@ dependencies = [
     "sse-starlette>=2.1",     # console trace streaming
     "pandas>=2.2",            # UCI ingest + bench
     "numpy>=1.26",            # bitmap / vector ops
+    "pyyaml>=6.0",            # YAML policy pack (precedent/policy.py) + KB front-matter
 ]
 
 [project.optional-dependencies]
