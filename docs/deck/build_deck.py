@@ -5,10 +5,10 @@ N1-deck-build.md §3, real numbers from Prep/final-numbers.md. Degraded rule app
 team-names + Fetch URLs (no invented names, no ‹…›/[[WAIT]] tokens in the export).
 """
 from pptx import Presentation
-from pptx.util import Inches, Pt, Emu
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.enum.shapes import MSO_SHAPE
+from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+from pptx.util import Inches, Pt
 
 BG = RGBColor(0x0B, 0x0F, 0x14)
 BODY = RGBColor(0xE6, 0xE6, 0xE6)

@@ -47,7 +47,9 @@ line-length = 100
 target-version = "py311"
 # data/analysis holds one-off exploratory pandas scripts (committed as evidence);
 # their idioms (e.g. `series == False` for elementwise masks) are intentional.
-extend-exclude = ["data", ".venv"]
+# docs/deck/build_deck.py is a one-off deck-generation script whose long lines are the
+# verbatim on-slide text (committed so the deck PDFs are reproducible).
+extend-exclude = ["data", ".venv", "docs/deck"]
 
 [tool.ruff.lint]
 # The open-weight guard: model-name tokens may appear ONLY in precedent/models.py.
