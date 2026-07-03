@@ -23,6 +23,7 @@ RULE 1: no model id here. RULE 4: seed from env by name only.
 from __future__ import annotations
 
 import os
+import re
 
 from uagents import Agent, Context, Protocol
 from uagents_core.contrib.protocols.chat import (
@@ -31,10 +32,10 @@ from uagents_core.contrib.protocols.chat import (
     chat_protocol_spec,
 )
 
-from agents import common
+from agents import approval, common
 from agents.protocol import IncidentMsg, TriageMsg
-from precedent import extractor
-from precedent.contracts import ApprovalDecision, ApprovalRequest
+from precedent import extractor, orchestrator
+from precedent.contracts import ApprovalDecision, ApprovalRequest, IncidentEvent
 from precedent_memory import db
 
 AGENT_NAME = "precedent-watcher"
@@ -54,13 +55,18 @@ _REJECT_WORDS = {"reject", "rejected", "no", "n", "cancel", "deny", "abort", "st
 
 
 # --------------------------------------------------------------------------- #
-# Registerable Chat Protocol (hello-world default; the loop swaps `reply` in)
+# Registerable Chat Protocol
+#   build_watcher()            -> the LIVE full-loop handler (the registerable default)
+#   build_watcher(reply=fn)    -> a text-only reply fn (degraded L0 / tests) via
+#                                 build_chat_protocol(fn) — NO echo fallback any more
 # --------------------------------------------------------------------------- #
-def build_chat_protocol(reply=None) -> Protocol:
-    """The Chat Protocol handlers. `reply(text) -> str` is the triage function; the
-    hello-world default echoes. The full loop swaps in a triage->approval reply
-    without changing the agent address (same seed)."""
-    reply = reply or (lambda text: f"Precedent Watcher received: {text}")
+def build_chat_protocol(reply) -> Protocol:
+    """A text-only Chat Protocol: `reply(text) -> str`. Used by the hosted degraded-L0
+    Watcher (triage/classify, never execute) and by unit tests. There is deliberately NO
+    echo default — the registerable Watcher wires the live loop (build_live_chat_protocol),
+    so a plain ASI:One chat runs the deterministic loop rather than echoing."""
+    if reply is None:
+        raise ValueError("build_chat_protocol requires an explicit reply function")
     chat_proto = Protocol(spec=chat_protocol_spec)
 
     @chat_proto.on_message(ChatMessage)
@@ -76,8 +82,50 @@ def build_chat_protocol(reply=None) -> Protocol:
     return chat_proto
 
 
+# In-process pending-gate map (sender address -> Prepared) for the LIVE loop. The hard
+# TTL + fail-closed sweep live in the DB `approval` ledger (agents/approval.py); this map
+# only carries the transient Prepared across the two chat turns in ONE process. If the
+# process restarts the DB row still ages out to non-action (never an unauthorised run).
+_LIVE_PENDING: dict[str, orchestrator.Prepared] = {}
+
+
+def build_live_chat_protocol() -> Protocol:
+    """The LIVE Chat Protocol: every ASI:One ChatMessage drives the FULL deterministic
+    loop via serve_chat_turn (report -> ONE gate message -> approve -> execute -> audit
+    hash). Opens the shared memory db + typed SimTools LAZILY at message time (like the
+    Operator's on_plan), so construction stays offline/network-free and the address is
+    stable across the handler swap. With no execution target configured it degrades to
+    L0 (triage/classify only) — never executes. RULE 2: the STANDING branch is zero-LLM."""
+    chat_proto = Protocol(spec=chat_protocol_spec)
+
+    @chat_proto.on_message(ChatMessage)
+    async def _on_chat(ctx: Context, sender: str, msg: ChatMessage) -> None:
+        await ctx.send(sender, common.ack_for(msg))
+        text = common.text_of(msg)
+        if _degraded():                       # hosted L0: triage/classify, never execute
+            await ctx.send(sender, common.text_message(_degraded_reply(text)))
+            return
+        from precedent.tools import SimTools
+        conn = db.connect(os.environ["PRECEDENT_MEMORY_DB"])
+        tools = SimTools(base_url=os.environ["PRECEDENT_SIM_URL"])
+        try:
+            answer = serve_chat_turn(text, sender, conn=conn, tools=tools, pending=_LIVE_PENDING)
+        finally:
+            conn.close()
+        await ctx.send(sender, common.text_message(answer))
+
+    @chat_proto.on_message(ChatAcknowledgement)
+    async def _on_ack(ctx: Context, sender: str, msg: ChatAcknowledgement) -> None:
+        ctx.logger.debug(f"ack from {sender} for {msg.acknowledged_msg_id}")
+
+    return chat_proto
+
+
 def build_watcher(reply=None) -> Agent:
-    """Construct the registerable Watcher (stable address from the env seed)."""
+    """Construct the registerable Watcher (stable address from the env seed). With no
+    `reply` it wires the LIVE full-loop handler (build_live_chat_protocol); pass a `reply`
+    fn for the degraded-L0 / test text-only handler. Either way the address is identical
+    (seed-derived), so the live registration survives the B1 handler swap."""
     watcher = Agent(
         name=AGENT_NAME,
         seed=common.resolve_seed("watcher"),
@@ -86,7 +134,8 @@ def build_watcher(reply=None) -> Agent:
         readme_path=common.README_PATH,      # both badges → Agentverse profile (Fetch gate)
         publish_agent_details=True,
     )
-    watcher.include(build_chat_protocol(reply), publish_manifest=True)
+    proto = build_live_chat_protocol() if reply is None else build_chat_protocol(reply)
+    watcher.include(proto, publish_manifest=True)
     return watcher
 
 
@@ -171,6 +220,164 @@ def make_decision(req: ApprovalRequest, sender_address: str) -> ApprovalDecision
         channel="chat",
         decided_at=db.utcnow_iso(),
     )
+
+
+# --------------------------------------------------------------------------- #
+# Deterministic report -> incident resolver (RULE 2: zero-LLM keyword/code match).
+# A live chat report names one of the three seeded MediaCo incidents; the Watcher maps
+# it to that incident's object of record (the sim holds the concrete object_id the plan
+# needs). The extractor still CONFIRMS the class fingerprint from the fetched structured
+# payload — the LLM never picks the incident and never confirms the class.
+# --------------------------------------------------------------------------- #
+_INCIDENT_KEYWORDS: dict[int, tuple[str, ...]] = {
+    1: ("epg", "guide", "listing", "blank", "freeview", "9pm", "9 o clock", "nine pm",
+        "pub-4012", "pub4012", "publish", "greyed"),
+    2: ("duplicate", "dup", "double", "twice", "overlapping", "dedup", "sch-dup",
+        "stacked", "double booked", "back to back", "same time"),
+    3: ("rights", "licence", "license", "vod", "on demand", "on-demand", "exclusivity",
+        "rights window", "takedown", "rgt-excl", "expired", "breach", "compliance",
+        "availability window"),
+}
+_CODE_TO_N = {"PUB-4012": 1, "SCH-DUP-002": 2, "RGT-EXCL-009": 3}
+
+
+def resolve_incident_n(text: str) -> int | None:
+    """Map a chat report to incident n in {1,2,3}, deterministically. Explicit
+    'incident N' / 'INC-N' / a normalised error code wins; otherwise the highest
+    keyword score. Returns None (no unique class) -> the Watcher asks for clarification
+    rather than guessing (fail-closed on ambiguity)."""
+    if not text:
+        return None
+    low = text.lower()
+    # explicit incident number
+    m = re.search(r"(?:incident|inc)[\s\-#:]*([123])\b", low)
+    if m:
+        return int(m.group(1))
+    # normalised error code (tolerate spaces/dashes and the O/0 garble)
+    norm = re.sub(r"[\s\-]", "", low).upper().replace("O", "0")
+    for code, n in _CODE_TO_N.items():
+        if re.sub(r"[\s\-]", "", code).upper().replace("O", "0") in norm:
+            return n
+    scores = {n: sum(1 for kw in kws if kw in low) for n, kws in _INCIDENT_KEYWORDS.items()}
+    best = max(scores, key=lambda n: scores[n])
+    if scores[best] == 0:
+        return None
+    # require a unique winner (no tie) so an ambiguous report is escalated, not guessed
+    if list(scores.values()).count(scores[best]) > 1:
+        return None
+    return best
+
+
+# --------------------------------------------------------------------------- #
+# serve_chat_turn — the network-free FULL loop, one ASI:One turn at a time.
+# Composes the SAME deterministic kernel the console path uses (orchestrator.prepare /
+# commit_execution) behind the chat gate. RULE 2: no LLM gates execution or sets a class
+# (the STANDING branch makes zero venice calls). RULE 3: a refusal discloses only the
+# denied count + owner team. Fail-closed: an expired/absent approval never executes.
+# --------------------------------------------------------------------------- #
+_STANDING_TIMER = "~15s"
+
+
+def _audit_tail_hash(conn) -> str | None:
+    row = conn.execute("SELECT hash FROM audit_log ORDER BY seq DESC LIMIT 1").fetchone()
+    return row["hash"] if row else None
+
+
+def _execution_reply(prefix: str, res, conn, hops) -> str:
+    """Terminal reply after commit_execution: outcome + the hash-chained audit tail
+    (provenance the human can cite) + the Watcher->Librarian->Operator hop-trail footer."""
+    outcome = res.step_results[0].get("outcome") if res.step_results else "unknown"
+    audit = _audit_tail_hash(conn) or "(pending)"
+    body = (f"{prefix}\n"
+            f"Outcome: {outcome} (verified={res.verified}, rolled_back={res.rolled_back}).\n"
+            f"Audit: {audit}")
+    return body + hop_trail_footer(hops or [])
+
+
+def serve_chat_turn(text: str, sender: str, *, conn, tools, pending: dict,
+                    principal: str = "scheduling-ops", hops: list | None = None) -> str:
+    """Drive ONE chat turn through the full loop and return the reply text. `pending`
+    (sender -> Prepared) carries an open gate across the two turns; the DB `approval`
+    ledger holds its hard TTL. Composes orchestrator.prepare / commit_execution — the
+    deterministic kernel — never an LLM, for every permission/risk/gate decision."""
+    approval.ensure_table(conn)
+    # 1) fail-closed sweep FIRST: age out any expired gates, and drop their in-process
+    #    Prepared in lock-step so a late 'approve' can never find a live plan.
+    expired = set(approval.expire_stale(conn))
+    for s, p in list(pending.items()):
+        req = p.approval_request
+        if req is not None and (req.incident_id, req.plan_hash) in expired:
+            pending.pop(s, None)
+
+    verdict = decide_from_reply(text)
+    live = approval.pending_for_sender(conn, sender)
+
+    # 2) an OPEN gate for this sender -> this turn is the decision (or a reconnect)
+    if live and sender in pending:
+        prepared = pending[sender]
+        req = prepared.approval_request
+        if verdict == "approve":
+            decision = make_decision(req, sender)                 # approver = sender verbatim
+            res = orchestrator.commit_execution(prepared, conn=conn, tools=tools,
+                                                decision=decision, actor=sender,
+                                                principal=principal)
+            approval.mark(conn, req.incident_id, req.plan_hash, "approved")
+            pending.pop(sender, None)
+            ref = prepared.ref or {}
+            action = (prepared.rule or {}).get("action_type", "fix")
+            prefix = (f"Approved by {sender}. Executed {action} "
+                      f"on {ref.get('object_type','?')} {ref.get('object_id','?')}.")
+            return _execution_reply(prefix, res, conn, hops)
+        if verdict == "reject":
+            approval.mark(conn, req.incident_id, req.plan_hash, "rejected")
+            pending.pop(sender, None)
+            return (f"Rejected — no change made. Incident {req.incident_id} left untouched. "
+                    "Nothing executed (the deterministic gate requires an explicit approval).")
+        # reconnect / anything ambiguous while a gate is open -> RE-PRESENT it (never lose it)
+        return "You still have a pending approval:\n\n" + render_approval(req, prepared)
+
+    # 3) a decision word with NO live gate -> fail-closed non-action (expired/absent)
+    if verdict is not None:
+        return ("No live pending approval for you (expired or absent) — non-action "
+                "(fail-closed). Re-report the incident to open a fresh gate.")
+
+    # 4) otherwise treat the text as a NEW incident report
+    n = resolve_incident_n(text)
+    if n is None:
+        return ("Couldn't identify the incident class from that report. Please name the "
+                "service/error (EPG publish failure, duplicate schedule slot, VOD rights "
+                "window) or the incident number, and I'll triage it.")
+    payload = tools.incident(n)
+    inc = IncidentEvent(incident_id=payload["incident_id"], raw_text=payload["raw_text"],
+                        source="chat", observed_at=payload["observed_at"])
+    prepared = orchestrator.prepare(inc, structured=payload["structured"], conn=conn,
+                                    tools=tools, principal=principal, actor=principal)
+
+    if prepared.outcome == "refused":
+        r = prepared.result.step_results[0] if prepared.result.step_results else {}
+        cnt = r.get("denied_count", "?")
+        owner = r.get("denied_owner_team") or "the owning team"
+        # RULE 3: count + owner ONLY — never a title, symptom, body, or secret.
+        return (f"Incident {inc.incident_id} — restricted. {cnt} documented remediation(s) "
+                f"hidden; owner team: {owner}. No content disclosed (fail-closed).")
+    if prepared.outcome == "escalated":
+        return (f"Incident {inc.incident_id} — no safe automated fix; routed to a human "
+                "(ladder floor). Nothing executed.")
+
+    if prepared.fast:
+        # RULE 2: STANDING repeat-class — zero-LLM fast-path, no prompt, ~15s.
+        res = orchestrator.commit_execution(prepared, conn=conn, tools=tools,
+                                            principal=principal, actor=principal)
+        prefix = (f"Incident {inc.incident_id} — {prepared.class_key}\n"
+                  f"Standing Approval (pre-approved standard change) — applied in "
+                  f"{_STANDING_TIMER}, no prompt (zero-LLM fast-path).")
+        return _execution_reply(prefix, res, conn, hops)
+
+    # slow-path: record the gate (hard TTL) + stash the Prepared, present ONE message.
+    req = prepared.approval_request
+    approval.record_pending(conn, req, sender_address=sender)
+    pending[sender] = prepared
+    return render_approval(req, prepared)
 
 
 # --------------------------------------------------------------------------- #
