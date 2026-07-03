@@ -116,6 +116,20 @@ def test_metadata_bypass():
     assert after.denied_owner_team in (None, "Rights Ops")   # only count+owner may surface
     assert _audit_denials(conn, "rights_only") >= 1
 
+    # Isolate the revoke defense so it is INDEPENDENTLY load-bearing (not masked by the
+    # auto-quarantine that recompile_for_source also triggers): revoke the source at the raw
+    # level WITHOUT recompiling, so the record's status stays 'active' and ONLY the live
+    # any_revoked join in _build_policy can deny. Removing that one check would leak here.
+    w2 = _world()
+    c2 = w2["conn"]
+    assert retrieve.retrieve("rights_only", {"class_key": "svc|RIGHTS-1|obj"}, conn=c2).hits
+    c2.execute("UPDATE acl_source SET revoked=1 WHERE external_ref='kb:RIGHTS'")
+    c2.commit()
+    assert c2.execute("SELECT status FROM memory_record WHERE id=?",
+                      (w2["r_rights"],)).fetchone()["status"] == "active"   # NOT quarantined
+    iso = retrieve.retrieve("rights_only", {"class_key": "svc|RIGHTS-1|obj"}, conn=c2)
+    assert iso.denied_count >= 1 and not _bundle_leaks(iso, w2["r_rights"], SECRET_RIGHTS)
+
 
 # --------------------------------------------------------------------------- #
 # 3. timing attack
@@ -237,3 +251,23 @@ def test_derived_memory_attack():
 
     # audit chain remains intact after the whole attack sequence
     assert audit.verify_chain(conn=conn)
+
+    # UNION INHERITANCE — the non-redundant core of derived-memory governance (no revoke
+    # involved): a record derived from TWO sources inherits BOTH constraints. A principal who
+    # can read one source's own record is STILL denied the derivative that also needs the other
+    # constraint. If the compiler used one source's bits instead of the union, this would leak.
+    c2 = db.connect(":memory:")
+    rt = store.ensure_constraint(c2, "jira", "issue-security:rights", "Rights Ops")
+    sc = store.ensure_constraint(c2, "jira", "issue-security:scheduling", "Scheduling Ops")
+    store.put_principal(c2, "rights_only", [rt])
+    fresh = db.utcnow_iso()
+    store.put_source(c2, "kb:R", [rt], last_verified_at=fresh)
+    store.put_source(c2, "kb:S", [sc], last_verified_at=fresh)
+    r_own = store.store({"kind": "executed_fix", "class_key": "svc|R-OWN|obj"}, ["kb:R"], conn=c2)
+    assert retrieve.check_access(c2, "rights_only", r_own)[0]     # can read kb:R's own record
+    r_derived = store.store({"kind": "executed_fix", "class_key": "svc|R-S-DERIVED|obj",
+                             "secret": SECRET_DERIVED}, ["kb:R", "kb:S"], conn=c2)
+    allowed, _owner = retrieve.check_access(c2, "rights_only", r_derived)
+    assert not allowed        # union(rights, sched) required; rights_only lacks sched -> denied
+    res = retrieve.retrieve("rights_only", {"class_key": "svc|R-S-DERIVED|obj"}, conn=c2)
+    assert not _bundle_leaks(res, r_derived, SECRET_DERIVED)
