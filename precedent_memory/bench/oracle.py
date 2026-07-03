@@ -26,6 +26,20 @@ import json
 from precedent_memory import db
 
 
+def _embargo_until(body):
+    """Parse an optional temporal-embargo (unlock_at) timestamp from a raw record body.
+    Recomputed independently of the compiler — reads raw JSON, decides with plain data."""
+    if not body:
+        return None
+    try:
+        data = body if isinstance(body, dict) else json.loads(body)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(data, dict) or not data.get("unlock_at"):
+        return None
+    return db.parse_iso(data["unlock_at"])
+
+
 def oracle_allow(conn, record_id, principal_constraint_ids, *, mode="live", now=None) -> bool:
     """Return True iff the principal may read record_id, decided from raw ACL rows.
 
@@ -40,9 +54,17 @@ def oracle_allow(conn, record_id, principal_constraint_ids, *, mode="live", now=
     # 1. STATUS. A quarantined/tombstoned (or missing) record is never served —
     #    its content is under active dispute or has been retracted.
     row = conn.execute(
-        "SELECT status FROM memory_record WHERE id=?", (record_id,)
+        "SELECT status, body FROM memory_record WHERE id=?", (record_id,)
     ).fetchone()
     if row is None or row["status"] != "active":
+        return False
+
+    # 1b. TEMPORAL EMBARGO. A record published with a FUTURE unlock_at is withheld from
+    #     everyone until then — even a fully-cleared principal, even a public record. An
+    #     embargo can only narrow access, never widen it (an unparseable stamp => still
+    #     embargoed => deny). Recomputed here from the raw record body, independently.
+    embargo = _embargo_until(row["body"])
+    if embargo is not None and now < embargo:
         return False
 
     # 2. LINEAGE. Pull every source feeding this record. No lineage => provenance

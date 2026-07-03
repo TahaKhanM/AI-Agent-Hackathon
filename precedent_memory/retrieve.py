@@ -18,6 +18,7 @@ deny. This bounds the check-then-fetch window.
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 
 from precedent.contracts import Hit, RetrievalBundle
@@ -50,6 +51,9 @@ class RecordPolicy:
     has_unverified: bool = False
     # constraint ids the record requires, for safe owner-team disclosure only
     required_ids: tuple[int, ...] = field(default_factory=tuple)
+    # Optional temporal embargo: a record published with a FUTURE unlock_at is withheld
+    # from everyone until then (a captured published-bonus predicate; §5 stretch item 3).
+    unlock_at: str | None = None
 
 
 # --------------------------------------------------------------------------- #
@@ -73,6 +77,34 @@ def stale(min_source_freshness: str | None, mode: str = "live") -> bool:
 
 
 # --------------------------------------------------------------------------- #
+# embargoed()  — the temporal-embargo predicate (§5 stretch item 3)
+# --------------------------------------------------------------------------- #
+def embargoed(unlock_at: str | None, now=None) -> bool:
+    """True while a record is under a temporal embargo (now < unlock_at). Fail-closed:
+    an unparseable unlock_at is treated as still-embargoed. A None unlock_at (the common
+    case) means no embargo. An embargo can only NARROW access, never widen it."""
+    if unlock_at is None:
+        return False
+    ts = db.parse_iso(unlock_at)
+    if ts is None:
+        return True
+    return (now or db.utcnow()) < ts
+
+
+def _unlock_at_of(body) -> str | None:
+    """Extract an optional temporal-embargo timestamp from a record body (JSON text or
+    dict). Absent/malformed -> None (no embargo)."""
+    if not body:
+        return None
+    try:
+        data = body if isinstance(body, dict) else json.loads(body)
+    except (TypeError, ValueError):
+        return None
+    val = data.get("unlock_at") if isinstance(data, dict) else None
+    return val if isinstance(val, str) else None
+
+
+# --------------------------------------------------------------------------- #
 # permitted()  — deterministic conjunction, fail-closed. NO LLM.
 # --------------------------------------------------------------------------- #
 def permitted(principal: Principal | None, record_policy: RecordPolicy | None,
@@ -90,6 +122,10 @@ def permitted(principal: Principal | None, record_policy: RecordPolicy | None,
     # Unverified provenance -> deny unconditionally (the sentinel bit is not a
     # satisfiable grant; it means "we cannot vouch for where this came from").
     if record_policy.has_unverified:
+        return False
+    # Temporal embargo -> denied to EVERYONE until unlock_at, even a fully-cleared
+    # principal and even a public record (an embargo narrows, never widens; fail-closed).
+    if embargoed(record_policy.unlock_at):
         return False
     # Public (unrestricted) records: readable by anyone, freshness irrelevant.
     if not record_policy.is_restricted:
@@ -125,9 +161,10 @@ def _build_policy(conn, record_id: int) -> RecordPolicy:
         (record_id,),
     ).fetchone()
     status_row = conn.execute(
-        "SELECT status FROM memory_record WHERE id = ?", (record_id,)
+        "SELECT status, body FROM memory_record WHERE id = ?", (record_id,)
     ).fetchone()
     status = status_row["status"] if status_row else "tombstoned"
+    unlock_at = _unlock_at_of(status_row["body"]) if status_row else None
     any_revoked = conn.execute(
         "SELECT EXISTS(SELECT 1 FROM lineage l JOIN acl_source s ON s.id = l.source_id "
         "WHERE l.record_id = ? AND s.revoked = 1) AS r",
@@ -138,7 +175,7 @@ def _build_policy(conn, record_id: int) -> RecordPolicy:
         return RecordPolicy(
             record_id=record_id, is_restricted=True, required_bits=0,
             min_source_freshness=None, policy_version=-1, any_revoked=bool(any_revoked),
-            record_status=status, has_policy=False,
+            record_status=status, has_policy=False, unlock_at=unlock_at,
         )
     required_bits = db.blob_to_bits(ep["required_bits"])
     required_ids = tuple(db.bits_to_ids(required_bits))
@@ -158,6 +195,7 @@ def _build_policy(conn, record_id: int) -> RecordPolicy:
         has_policy=True,
         has_unverified=has_unverified,
         required_ids=required_ids,
+        unlock_at=unlock_at,
     )
 
 
