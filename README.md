@@ -8,6 +8,8 @@ Precedent is an agent that detects an enterprise incident, retrieves the **docum
 
 Built for the **UK AI Agent Hackathon EP5** across three tracks — Conduct ("Make Legacy Move"), Fetch.ai (Agentverse / Agent Chat Protocol / ASI:One), and BasedAI (permission-aware memory governance).
 
+> **▶ Team, start here: [`GETTING-STARTED.md`](GETTING-STARTED.md)** — setup in ~10 minutes and your first task, per person.
+
 ## Hard rules (do not break)
 
 - **Open-weight models only.** Every model call goes through the Venice OpenAI-compatible API; the *only* file allowed to name a model is [`precedent/models.py`](precedent/models.py). No OpenAI/Anthropic/Gemini/Grok/closed model touches the runtime pipeline. CI grep guards this (`scripts/check_open_weight.sh`).
