@@ -1,17 +1,16 @@
-# PACKET — Rehearsal Runner (timing, judge-question drill, Sat 09:00 §4.3 gates)
+# PACKET — Rehearsal Runner (timing, judge-question drill, Saturday §4.3 gates)
 
-> **Owner:** N1 · **Runs:** Fri 17:00–18:00 (prep, inside shift) + **Sat 06:45–09:30** (rehearsals 06:45–09:00, §4.3 gates 09:00–09:30, then everyone departs for Blackett LT1)
-> **Budget:** ~2.0 ph (the ledger's "Rehearsal + gates" row)
-> **Sent to you by:** T3 via WhatsApp with ONE attachment: `QA-bank-extract.md` (T3 prepares it Friday by 17:00: the question lines + their bold one-sentence openers from the team's Q&A bank — nothing else, ~2 pages)
-> **Your output goes to:** the team thread (photos of filled sheets) + T3, who files them in `docs/evidence/`
-> **You need:** phone stopwatch, paper or Notes app for scoring sheets, claude.ai (free tier), the attachment
-> **Also:** hand the §3 scoring sheet to **N2 on Friday by 18:00** — N2 scores the Fri 18:30 and 20:00 run-throughs with the same sheet (you're off shift at 18:00); results go in the same thread.
+> **Owner:** N1 · **Phase:** runs during **harden+ambition** (a first prep pass once the pitch script is stable) and then the **Saturday assemble/submit** rehearsal block, ending at the §4.3 gates before everyone departs for Blackett LT1.
+> **Work from:** `Prep/qa-bank.md` (the team's Q&A bank — the question lines + their bold one-sentence openers) and the current pitch script in the Plan. You have repo access; read these directly, no one hands them to you.
+> **Your output:** filled scoring sheets + the gate checklist. Commit them into `docs/evidence/` on your own branch (or drop photos of paper sheets into `docs/evidence/` and the team thread), then merge/PR per the team's convention. No relay through T3.
+> **You need:** a stopwatch (phone lap function), scoring sheets (paper or a Notes doc), your AI tool pointed at `Prep/qa-bank.md`.
+> **Coordinate:** N2 also owns video/QA — if N2 runs any of the earlier run-throughs, hand them a copy of the §3 scoring sheet + the §2 facts page so they score against the same rubric and post results to the same thread.
 
 ---
 
 ## 1. Why this exists
 
-The pitch is 3 min + 2 min Q&A, VC judges (LocalGlobe, Antler, EWOR) + sponsor judges. The script is written to **2:42 at ~150 wpm; the rehearsal target is 2:40, hard ceiling 2:45**. Whether Saturday's demo runs live or as a narrated recording is decided **mechanically** by the §4.3 gate checklist you run at 09:00 — not by mood, not by debate (the rule was ratified at Friday stand-up). You are the timekeeper, the drill sergeant, and the gate clerk. You never negotiate the rules; you record against them.
+The pitch is 3 min + 2 min Q&A, VC judges (LocalGlobe, Antler, EWOR) + sponsor judges. The script is written to **2:42 at ~150 wpm; the rehearsal target is 2:40, hard ceiling 2:45**. Whether Saturday's demo runs live or as a narrated recording is decided **mechanically** by the §4.3 gate checklist you run in the Saturday block — not by mood, not by debate (the rule is pre-ratified). You are the timekeeper, the drill sergeant, and the gate clerk. You never negotiate the rules; you record against them.
 
 ## 2. Fixed facts you score against (memorise the numbers, keep this page open)
 
@@ -29,7 +28,9 @@ The pitch is 3 min + 2 min Q&A, VC judges (LocalGlobe, Antler, EWOR) + sponsor j
 
 **Choreography to watch (Presenter 2):** hotkey `G` fires each incident · hero click 1 = APPROVE · hero click 2 = PROMOTE TO STANDING APPROVAL · Revoke is HOVERED at 1:43, never clicked · Window-B (Jira) hops only when the console's sync-tick is green — if not green, the cut is skipped silently.
 
-## 3. Scoring sheet (one per run — copy 8 blanks Friday)
+> **Honesty rules (non-negotiable, same as every packet):** never say or show a placeholder like ‹XX› out loud or on screen. Caption/say the data as a **"25k-record store"** — never overstate scale. **TMDB was rejected** as a data source; don't reference it. If a claim in a required line isn't true of the current build, cut the line rather than assert it. No secrets, tokens, or internal URLs on screen.
+
+## 3. Scoring sheet (one per run — make ~8 blanks before the first block)
 
 ```
 RUN #__  ·  Date/time: ____  ·  Mode: live / airplane / video-switch drill
@@ -46,44 +47,48 @@ VERDICT: CLEAN / NOT CLEAN (any timing fail, missed takeaway, banned word, or ch
 
 ## 4. The judge-question drill (after every timed run, ~4 min)
 
-Paste into claude.ai with the `QA-bank-extract.md` attachment (re-attach each new chat; keep one chat per rehearsal block):
+The judge-question generator runs **in your own AI tool** against `Prep/qa-bank.md`. Point the tool at that file and drive it with something like the prompt below (keep it in one session per rehearsal block so it remembers what it already asked, and paste back the running list of used questions):
 
 ```
 You are a panel of hostile hackathon judges (a VC, a sponsor-track judge, and a sceptical
-engineer). Attached is our Q&A bank extract: known questions and the one-sentence openers we
-rehearsed. Generate 10 FRESH questions for rehearsal round ‹N›:
+engineer). Read Prep/qa-bank.md: our known questions and the one-sentence openers we rehearsed.
+Generate 10 FRESH questions for rehearsal round ‹N›:
 - 6 must be re-phrasings or sharper versions of bank questions (different words, same trap);
 - 3 must be curveballs NOT in the bank but fair game for this pitch (an agent that re-applies an
   org's documented fixes with approval gates, audit, auto-rollback, permission-aware memory,
   demoed on a simulated broadcaster with real public data and live Jira);
 - 1 must be an aggressive interruption-style question a VC would fire mid-answer.
-Do NOT repeat any question from this list of already-used ones: [paste previous runs' questions,
-or "none"]. Output: a numbered list of the 10 questions only — no answers, no commentary.
+Do NOT repeat any question already used: [paste previous rounds' questions, or "none"].
+Output: a numbered list of the 10 questions only — no answers, no commentary.
 ```
 
-Drill mechanics: fire 6 of the 10 (your pick, favour the curveballs), 20 seconds per answer, hard cut. Score each: did the answer start from (or clearly land) the bank's bold opener? Did exactly ONE person answer (numbers/tech/market ownership)? Log misses on the sheet. Hand any question that stumped the room to T3 for the Q&A owners to prep overnight/at breakfast.
+Make the tool **verify** it actually pulled from `Prep/qa-bank.md` (the 6 re-phrasings should trace to real bank entries) and that it's not repeating earlier rounds. Save each generated list into the thread / evidence so rounds don't collide.
 
-## 5. Friday prep (17:00–18:00, inside your shift)
+Drill mechanics: fire 6 of the 10 (your pick, favour the curveballs), 20 seconds per answer, hard cut. Score each: did the answer start from (or clearly land) the bank's bold opener? Did exactly ONE person answer (numbers/tech/market ownership)? Log misses on the sheet. Any question that stumped the room goes on the **stump list** for the Q&A owners to prep before the next block.
 
-1. Confirm T3 sent `QA-bank-extract.md`; run PROMPT once as a smoke test (round "0").
-2. Make 8 blank scoring sheets; test your stopwatch lap function against the beat map.
-3. Hand N2 a sheet + the §2 page for the Fri 18:30 and 20:00 run-throughs; agree they post filled sheets to the thread.
-4. Post in the thread: "Rehearsal blocks Sat 06:45–09:00, gates 09:00–09:30 — presenters + demo machine + phone (party-trick tickets) required."
+## 5. Prep pass (during harden+ambition, once the script is stable)
 
-## 6. Saturday morning schedule (you own the clock)
+1. Read `Prep/qa-bank.md`; run the drill prompt once as a smoke test (round "0") to confirm your tool pulls from it cleanly.
+2. Make ~8 blank scoring sheets; test your stopwatch lap function against the beat map.
+3. If N2 (or anyone) is running earlier run-throughs, hand them a sheet + the §2 facts page and agree they post filled sheets to the thread.
+4. Post in the thread: "Saturday rehearsal block needs presenters + demo machine + phone (party-trick tickets). Gates run at the end of the block — arrive with the build frozen."
 
-| Time | What |
+## 6. Saturday rehearsal block (you own the clock)
+
+Run the block in this order; it's dependency-ordered, not clock-pinned:
+
+| Step | What |
 |---|---|
-| 06:45–07:00 | Setup: demo machine reset (`make demo-reset` — time it, that's gate 6 data), sheets out, Claude chat open |
-| 07:00–08:40 | Timed full runs + drill after each. Aim for 4–6 runs. Order: 2 normal · 1 **airplane mode** (Wi-Fi + hotspot OFF; §4.1 line delivered once, exactly) · 1 **video-switch drill** (at beat 2, presenter kills the console feed on your signal; P2 must be narrating the backup video within 5s, §4.2 line verbatim) · then normal runs until 3 CONSECUTIVE cleans exist |
-| 08:40–09:00 | Party-trick rehearsal: the two tickets chosen at Friday's playtest, filed from the phone, both outcomes shown on the big screen |
-| 09:00–09:30 | **§4.3 GATES (below)** — fill, photograph, announce |
-| 09:30 | Hard stop. Depart for Blackett LT1 (doors 10:00). |
+| Setup | Demo machine reset (`make demo-reset` — **time it**, that's gate 6 data), sheets out, AI tool session open on `Prep/qa-bank.md` |
+| Timed runs + drill | Full runs, drill after each. Aim for 4–6. Order: 2 normal · 1 **airplane mode** (Wi-Fi + hotspot OFF; §4.1 line delivered once, exactly) · 1 **video-switch drill** (at beat 2, presenter kills the console feed on your signal; P2 must be narrating the backup video within 5s, §4.2 line verbatim) · then normal runs **until 3 CONSECUTIVE cleans exist** |
+| Party trick | The two tickets chosen at playtest, filed from the phone, both outcomes shown on the big screen |
+| **Gates** | Run the **§4.3 gate checklist (§7 below)** — fill, save/photograph, announce |
+| Depart | Hard stop for Blackett LT1 (doors 10:00). Gates outrank extra runs — when it's time to gate, you stop rehearsing and gate, whatever the run count. |
 
-## 7. The §4.3 gate checklist (run at 09:00 — this decides live vs recorded)
+## 7. The §4.3 gate checklist (run at the end of the block — this decides live vs recorded)
 
-- [ ] **Gate 0 (prerequisite, verify with the team):** the Fri ~20:00 full two-presenter run-through happened
-- [ ] **Gate 1:** 3 consecutive clean full runs at ≤2:45, timed (from this morning's sheets)
+- [ ] **Gate 0 (prerequisite, verify with the team):** a full two-presenter run-through happened before this morning (during harden)
+- [ ] **Gate 1:** 3 consecutive clean full runs at ≤2:45, timed (from this block's sheets)
 - [ ] **Gate 2:** 1 full run in airplane mode passed (degraded-banner path; §4.1 line delivered)
 - [ ] **Gate 3:** 1 full run switching to backup video at beat 2; switch <5s (§4.2 drill)
 - [ ] **Gate 4:** party trick — 2 messy phone tickets, one triaged correctly, one degraded safely, both on the projector
@@ -93,16 +98,24 @@ Drill mechanics: fire 6 of the 10 (your pick, favour the curveballs), 20 seconds
 - **0–1 gates failed → GO LIVE** (live-local-first, drilled video fallback armed).
 - **2+ gates failed → FLIP: narrated recording + ONE live element (the Approve click against the cached-mode console).** This is the VC judge's preferred configuration anyway — announce it as a landing zone, not a defeat.
 
-## 8. DONE when
+## 8. §5 ambition hooks that touch this brief
 
-- [ ] Fri: N2 has the sheet + posted results for the 18:30 and 20:00 runs
-- [ ] Sat 09:30: all scoring sheets + the gate checklist photographed into the team thread
+If T2's ambition beats have landed by the Saturday block, add one line each to the run so the drill actually exercises them (and the demo shows them off):
+- **Live RESTRICT hotkey:** work the hotkey into one run — a judge names an entity, presenter hits RESTRICT live, the refusal (Beat 3) then visibly honours it. Score it under choreography.
+- **Attract-mode idle loop:** if the console idles into attract-mode, confirm it's running on the big screen during setup/party-trick, and that a keypress cleanly exits it into the live demo (no reload).
+- **Temporal-embargo media beat / change-record artifact:** if these are demoable, add one drill question to the bank prompt targeting each, so the Q&A owners can land the opener under fire.
+None of these are gates — they're only in the run if T2 shipped them. Don't rehearse a beat that isn't in the build.
+
+## 9. DONE when
+
+- [ ] Prep pass complete: smoke-test round "0" ran, sheets made, earlier-run-through scorer briefed (if any)
+- [ ] All scoring sheets + the gate checklist saved into `docs/evidence/` (committed on your branch, or photographed into the thread)
 - [ ] One-line announcement posted and said out loud: "GATES: ‹n› failed → **LIVE** / **RECORDED+one-click**" — T1 ratifies in the thread
-- [ ] Stump-questions list handed to T3
+- [ ] Stump-questions list handed to the Q&A owners
 
-## 9. If it goes wrong
+## 10. If it goes wrong
 
-- **Presenters resist the flip at 09:25:** read the rule aloud; it was ratified Friday. Your job ends at recording + announcing; T1 owns enforcement.
+- **Presenters resist the flip:** read the rule aloud; it was pre-ratified. Your job ends at recording + announcing; T1 owns enforcement.
 - **Runs keep failing on time:** the script's own cut is pre-authorised — drop "for what is usually minutes of keystrokes once the fix is known" from the hook. Any bigger cut is the presenters' call, not yours; you just keep timing.
-- **Claude free tier caps mid-morning:** reuse round-0 and Friday's generated questions (that's why every list is saved in the thread); the drill degrades to repetition, never to skipped.
-- **Clock pressure:** gates outrank extra runs. At 09:00 you stop rehearsing and start gating, whatever the run count.
+- **AI tool wanders / repeats questions:** reuse round-0 and earlier-round lists (that's why every list is saved); the drill degrades to repetition, never to skipped. Re-point it at `Prep/qa-bank.md` and paste the used-question list back in.
+- **Clock pressure:** gates outrank extra runs. When it's time to gate, you stop rehearsing and start gating, whatever the run count.

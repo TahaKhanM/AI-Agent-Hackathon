@@ -1,30 +1,30 @@
 # PACKET N1-LICENCE — Verify licences and write the attribution lines + README data-provenance table
 
-> WHO RUNS THIS: **N1** — non-technical teammate, working on **claude.ai FREE tier**, no repo access. One attachment, one Claude conversation, one browser-verification pass. Budget: **~1 hour**.
-> WHO BUNDLES AND SENDS: **T3** emails N1 one file (§1).
-> WHO RECEIVES OUTPUT AND COMMITS: N1 emails one markdown document to **T3**; T3 commits the pieces into the repo README (`## Data provenance`), `data/raw/SOURCES.md`, and hands the footer line to T2 for the console.
-> WHERE THIS FITS IN N1's DAY: Friday **14:00–15:00** (after KB batch 2, before the deck-core block). HARD DEADLINE: output with T3 by **15:30** — the provenance section must be in the README before the repo goes public (~19:30 Friday, ahead of the gitleaks scrub and the Fetch public-repo gate), and the same text feeds the deck's provenance strip and slide A2.
+> WHO RUNS THIS: **N1** — data + content lane. You have repo access and a capable AI coding tool (Claude Code / Codex-class). You do a browser-verification pass yourself, drive your AI tool against the data plan, and **commit the results directly** (branch/worktree → merge or PR per team convention).
+> WHERE THIS FITS: **Phase 1 (foundations)**, alongside the data lane and before the repo goes public. This is a hard gate: the `## Data provenance` section must be in the README **before the repo is made public** — the Fetch public-repo gate and the gitleaks scrub both come after it, and the same text feeds the deck's provenance strip (slide A2). Land it early in foundations; don't let it slip toward the freeze.
 
 ---
 
 ## 0. What you are making and why it matters
 
-Every byte of demo content is real public data, and saying so — with licences verified and two sources visibly REJECTED on licence grounds — is itself a scoring beat ("the diligence is the point"). You produce four small text artifacts:
+Every byte of demo content is real public data, and saying so — with licences verified and two sources visibly REJECTED on licence grounds — is itself a scoring beat ("the diligence is the point"). You produce and commit four small text artifacts:
 
 1. The repo README `## Data provenance` section (intro + table + three fixed paragraphs).
-2. The console footer attribution one-liner (T2 renders it verbatim).
+2. The console footer attribution one-liner (T2 renders it verbatim in the console — hand them the exact string).
 3. The `data/raw/SOURCES.md` content (terse per-file table).
-4. A verification record: you personally opened each licence page today and confirmed the wording.
+4. A verification record: you personally opened each licence page today and confirmed the wording — commit it in the commit message / a `data/raw/VERIFICATION.md`.
 
-## 1. What T3 sends you (Friday by 13:45)
+## 1. What you work from
 
-| # | Repo path | Why |
-|---|---|---|
-| 1 | `Idea/refinement/01-realistic-data-plan.md` | The data plan — its §0 table, §2 construction rule, §3 honest framing, and §7 provenance text are your source of truth |
+Your source of truth is already in the repo:
 
-## 2. The browser verification pass (15 min — do this BEFORE the Claude conversation)
+| Repo path | Why |
+|---|---|
+| `Idea/refinement/01-realistic-data-plan.md` | The data plan — its §0 table, §2 construction rule, §3 honest framing, and §7 provenance text are canonical. Do not contradict it. |
 
-Open each link below in your browser. For each, confirm the exact thing listed and note "VERIFIED [time]" or "MISMATCH: [what you saw]". A mismatch goes to T3 immediately by WhatsApp — never silently edit around one. (The team verified these live earlier on 3 Jul; your pass is the same-day re-check that the public pages still say what we cite.)
+## 2. The browser verification pass (do this FIRST, before you write anything)
+
+Open each link below in your browser. For each, confirm the exact thing listed and note "VERIFIED [date/time]" or "MISMATCH: [what you saw]". A mismatch is escalated to the team immediately — never silently edit around one. This is the same-day re-check that the public pages still say what we cite. This pass is yours alone: your AI tool cannot browse these for you, and the human eyeball is the whole point.
 
 | Source | URL | Confirm this |
 |---|---|---|
@@ -35,14 +35,18 @@ Open each link below in your browser. For each, confirm the exact thing listed a
 | Freeview-EPG repo | https://github.com/dp247/Freeview-EPG | Repo licence is **GPL-3.0**; note the "for personal use" wording if present |
 | TMDB API terms | https://www.themoviedb.org/api-terms-of-use | The terms contain the prohibition on use in connection with **AI/ML applications** (this justifies our rejection sentence) |
 
-## 3. The Claude conversation (one chat — copy-paste verbatim)
+Keep these notes — you paste them into your AI tool and into the verification record you commit.
 
-Attach: `01-realistic-data-plan.md` only. Paste, after filling in your verification notes:
+## 3. Driving your AI tool
+
+Point your tool at `Idea/refinement/01-realistic-data-plan.md` (sections 0, 2, 3, 7) and feed it your §2 verification notes. You know your tool; drive it however you like — the scaffold below is the *content spec*, not a script to paste verbatim. What matters is that the four parts come out exactly to spec and you verify each against your own notes before committing.
+
+Prompt it with something like:
 
 ```
 You are writing the data-licence and attribution text for a hackathon project README. The attached
-data plan is the source of truth (see its sections 0, 2, 3, and 7). I have just re-verified each
-licence page in my browser; my notes:
+data plan (Idea/refinement/01-realistic-data-plan.md, sections 0, 2, 3, 7) is the source of truth.
+I have just re-verified each licence page in my browser; my notes:
 
 [paste your §2 verification notes here, including the UCI page's own citation text]
 
@@ -94,23 +98,26 @@ rejected-sources paragraph; keep the words "CC BY-SA", "CC BY 4.0", "CC0", "GPL-
 never mention TMDB or BBC anywhere EXCEPT the rejected-sources paragraph.
 ```
 
-Read the output against your own notes once — you are the human check that no licence got mangled.
+Make your tool verify: the four caption/paragraph honesty rules hold ("25k real incidents", exact licence strings, TMDB/BBC only in the rejected paragraph, the rights-window sentence verbatim). Then read the output against your own notes once — **you are the human check that no licence got mangled.**
 
-## 4. Hand-back and what DONE looks like
+## 4. Committing and what DONE looks like
 
-- Email the single markdown document to **T3 by 15:30 Friday** as `licence-attribution.md`; WhatsApp "LICENCE PACKET SENT".
-- T3 splits it: Part 1 → repo README; Part 2 → T2 (console footer, rendered verbatim); Part 3 → `data/raw/SOURCES.md`; Part 4 → the commit message.
+- Commit directly on a branch/worktree, then merge or open a PR per the team's convention. Split the artifact across its homes:
+  - Part 1 → repo README `## Data provenance` section.
+  - Part 2 → hand the exact one-liner to **T2** for the console footer (rendered verbatim); you can also drop it in a short `data/raw/FOOTER.md` so it's version-controlled.
+  - Part 3 → `data/raw/SOURCES.md`.
+  - Part 4 → the commit message and/or `data/raw/VERIFICATION.md`.
 - DONE checklist:
-  - [ ] All six §2 verifications recorded with times; any MISMATCH escalated to T3 before writing.
+  - [ ] All six §2 verifications recorded with date/time; any MISMATCH escalated to the team before writing.
   - [ ] TVmaze row includes the link-back AND the share-alike note on the committed derived data.
   - [ ] UCI citation is the UCI page's own text, not reconstructed.
   - [ ] Freeview-EPG carries the GPL-3.0 + "committed demo snapshot only, not redistributed as a product feed" note.
   - [ ] The TMDB-rejected sentence, the IMDb sentence, and the BBC sentence are present, in the rejected-sources paragraph only.
   - [ ] The rights-window rule is verbatim, ending "...only the window term is synthetic, and we say so."
-  - [ ] No placeholder tokens; this packet has no waiting cells — it ships complete or not at all.
+  - [ ] No placeholder tokens (never ship a ‹XX›); no secrets in anything you commit.
+  - [ ] The README `## Data provenance` section is merged **before** the repo goes public — flag T3 that the provenance gate is clear.
 
-## 5. Fallbacks
+## 5. Fallbacks and honesty rules
 
-- A licence page is down or changed: report to T3 with a screenshot; T3 decides (the team holds earlier same-day verification evidence — your note becomes "page unreachable at [time]; citing this morning's verification").
-- Free-tier cap: this is a single bounded conversation — if it dies, T3 reruns the identical prompt on their own seat with your verification notes; the browser pass in §2 is yours alone and is already done.
-- Squeezed: the non-negotiable core is Part 1 (README section) — the Fetch public-repo gate and the Conduct provenance beat both hang off it. Parts 2–4 can follow by 17:00 if needed; say so to T3 rather than rushing the licence table. Honest and late beats fast and wrong here — this is the one artifact where an error hands a judge a violation to find.
+- A licence page is down or changed: capture a screenshot, escalate to the team, and record the note as "page unreachable at [date/time]; citing today's verification." Never guess around a licence you couldn't confirm.
+- The non-negotiable core is Part 1 (README section) — the Fetch public-repo gate and the provenance beat both hang off it, so it must land before the repo goes public. Parts 2–4 can follow shortly after if you're squeezed; flag the team rather than rushing the licence table. **Honest and slightly later beats fast and wrong here** — this is the one artifact where an error hands a judge a violation to find.

@@ -1,29 +1,31 @@
 # PACKET N2-BASEDAI — Draft the BasedAI PR README (+ Venice-only .env.example + PR description)
 
-> WHO RUNS THIS: **N2** — non-technical teammate, working on **claude.ai FREE tier**, no repo access. Everything you need is in this file plus the three attachments.
-> WHO BUNDLES AND SENDS: **T3** emails N2 the three files in §1 by 13:30 Friday.
-> WHO RECEIVES OUTPUT AND COMMITS: N2 emails the drafts to **T3**; T3 commits them into the team folder of the BasedAI fork (the skeleton PR opened at Friday stand-up — the fork/PR itself is a HUMAN task owned by T3, since no GitHub token is configured).
-> WHERE THIS FITS IN N2's DAY: Friday **14:30–17:00** (draft), then a 30-minute callback when bench numbers arrive (**~19:30–20:45**, before the 21:00 freeze). Saturday morning T3 pastes in the final video link and realism numbers — that part needs no Claude session.
+> **WHO OWNS THIS:** **N2**. You have repo access and a capable AI coding tool. You draft the README, the Venice-only `.env.example`, and the PR description; you commit them on your own branch/worktree.
+> **WHO COMMITS TO THE PR:** **T3** owns the BasedAI fork/PR (the fork + PR itself is a human GitHub task — no token is wired). Once your drafts are on a branch, T3 merges them into the fork's team folder and pushes to the PR. Open a PR into the fork or hand T3 the branch per the team's convention — either way the words are yours, the PR mechanics are T3's.
+> **WHERE THIS FITS:** In **Phase 0**, open the skeleton with T3 so the README frame exists early. Draft the full README + `.env.example` + PR description across **Phases 0–2** so they are commit-ready before the **G2 freeze**. The two bench cells fill **once T3's conformance numbers land** (before the freeze, G4). The video link and any late realism number are additive Saturday pushes — no fresh session needed for those.
 
 ---
 
 ## 0. What you are making and why it matters
 
-The BasedAI track is entered by **PR only** (a pull request into the BasedAI hackathons repo — DoraHacks alone does not enter it). The skeleton PR opens at Friday stand-up; your job is the **content**: the README that the BasedAI judges actually read, a Venice-only `.env.example` (the track template's generic one lists ANTHROPIC/OPENAI keys — ours must not), and the PR description text. Deadline pressure is real: the track repo says "3 Jul end of day" in one place and "4 Jul before judging" in another, so content must be commit-ready Friday evening, with only additive pushes Saturday.
+The BasedAI track is entered by **PR only** (a pull request into the BasedAI hackathons repo — DoraHacks alone does not enter it). The skeleton PR opens in Phase 0 (T3's GitHub task); your job is the **content**: the README that the BasedAI judges actually read, a Venice-only `.env.example` (the track template's generic one lists ANTHROPIC/OPENAI keys — ours must not), and the PR description text. Deadline pressure is real: the track repo says "3 Jul end of day" in one place and "4 Jul before judging" in another, so content must be commit-ready before the freeze, with only additive pushes on Saturday.
 
 Two things are disqualifiers if wrong: (1) the **open-weight models declaration** (required, verbatim, prominent); (2) any hint of a closed/proprietary model in the loop. Copy, don't compose, everywhere this packet says "verbatim".
 
-## 1. What T3 sends you (Friday by 13:30 — exactly 3 attachments, the free-tier max)
+**The ambition here (from BUILD-PLAN §5, stretch item 1):** the README is where the *complete BasedAI green-tick table* lands — all 10 published metrics measured vs threshold with T3's independent oracle, and **6/6** named adversarial attacks (not the 4/6 fallback) + derived-memory-correctness + the O(1)/O(log-n) latency-vs-size curve. This table, filled in green against a **live Jira ACL source** the purpose-built competitor can't match, is how the entry decisively wins the track. Build the table structure so every one of those rows exists and is waiting for T3's number — a full green table is the target, a partial one is the honest fallback.
+
+## 1. Source files you work from (all in the repo — you have access)
 
 | # | Repo path | What it gives you |
 |---|---|---|
 | 1 | `Idea/Idea-Development.md` | Product concept (§2: the closed loop, the ladder, A/B/C memory semantics, the open-weight registry) — the README's substance |
 | 2 | `docs/evidence/README.md` | The evidence index — every claim's proof link, and which rows are still pending (⏳) |
-| 3 | `CLAUDE-AVAILABLE-APIS.md` | The verified environment facts, including the pinned-models block you must copy verbatim |
+| 3 | `CLAUDE-AVAILABLE-APIS.md` | The verified environment facts, including the pinned-models block you copy verbatim |
+| 4 | The BasedAI track template (`_TEMPLATE` in the fork T3 opens) | The canonical heading order — confirm it against the live template, it wins over §2 if it has drifted |
 
 ## 2. Fixed content you must use exactly (embedded here so nothing depends on memory)
 
-**Template headings — verbatim, in this order, nothing renamed** (fetched live from the track template):
+**Template headings — verbatim, in this order, nothing renamed** (confirm against the live track template):
 
 ```
 # <Project Name>
@@ -36,7 +38,7 @@ Two things are disqualifiers if wrong: (1) the **open-weight models declaration*
 ## License
 ```
 
-**The open-weight models declaration — copy VERBATIM from CLAUDE-AVAILABLE-APIS.md** (reproduced here; if the attachment differs, the attachment wins):
+**The open-weight models declaration — copy VERBATIM from `CLAUDE-AVAILABLE-APIS.md`** (reproduced here; if the file differs, the file wins):
 
 ```
 - Pinned models (verified):
@@ -51,16 +53,17 @@ This block sits in its own prominent subsection **"Open-weight models (required 
 > "No closed or proprietary model is called anywhere in the pipeline; the only file that may name a model is `precedent/models.py`, and CI greps for violations."
 > "Verification evidence: Venice `/models` dumps committed to `docs/compliance/` (2026-07-03), each pinned ID carrying its public huggingface.co weights URL."
 
-**The six adversarial attacks — always named in full, verbatim:** query inference · metadata bypass · timing · collection · prompt injection · derived-memory.
+**The six adversarial attacks — always named in full, verbatim:** query inference · metadata bypass · timing · collection · prompt injection · derived-memory. The ambition target is **6/6 passing** — the table names all six whether or not a run is in yet.
 
 **Attribution discipline (locked):** credit the public track-Discord thread for the A/B/C semantics; NEVER write that the sponsor "endorsed our design". Safe sentence: "The A/B/C semantics follow the model worked out publicly in the track Discord (2 Jul); the implementation, live-Jira ACL sync, fail-closed cache, and the working product around it are ours."
 
-**Waiting-cell tokens:** mark cells that wait on late numbers with `[[WAIT:...]]` (ASCII, greppable). The final-ready rule (G6, Sat 08:45): a search for `[[WAIT` and for `‹` must return zero.
+**Waiting-cell tokens:** mark cells that wait on late numbers with `[[WAIT:...]]` (ASCII, greppable). Final-ready rule: a search for `[[WAIT` and for `‹` must return zero before submit.
 
-## 3. Conversation plan (copy-paste verbatim)
+## 3. Driving your AI tool
 
-### Conversation B1 (Fri ~14:30) — the README draft
-Attach all 3 files from §1. Paste:
+You have a good model — you don't need a locked script, but the README has enough hard constraints that a tight brief saves a rewrite. Point your tool at the four source files in §1 and drive it with something like the brief below. After it drafts, **you** paste the verbatim models block yourself (never let the model retype the pinned IDs — a hallucinated version string is a disqualifier). Then make the tool **verify**: grep the draft for `[[WAIT` and `‹`, confirm the eight headings appear verbatim in order, confirm the six attack names all appear, confirm "endorsed our design" does NOT appear, and confirm no number exists that isn't in a source file or a `[[WAIT]]` token.
+
+### The README brief (drive your tool with this — adapt freely)
 
 ```
 Draft a hackathon submission README for "Precedent" — an incident-resolution agent whose
@@ -72,17 +75,18 @@ Use EXACTLY these headings, in this order, renaming only <Project Name> to Prece
 # <Project Name> / ## What it does / ## Demo / ## How to run it / ## How it works /
 ## Tech & sponsor APIs used / ## What's next / ## License
 
-Content requirements, all grounded in the three attached files (do not invent anything):
+Content requirements, all grounded in the source files (do not invent anything):
 1. "What it does": the thesis and closed loop from Idea-Development.md section 2, compressed to
    ~6 lines, plus one line that the memory governance ships as a standalone importable library
    (precedent_memory) that the product consumes.
 2. "Demo": a placeholder video link written exactly as [[WAIT:VIDEO-LINK]], plus one sentence
-   each for the three demo beats (approve->fix, 15s standing-approval repeat, permission refusal)
+   each for the three demo beats (approve->fix, standing-approval repeat, permission refusal)
    and the dual-enforcement revocation moment (one Jira security-level flip makes both Jira AND
    every derived memory record go dark within seconds, two independent audit logs).
-3. "How to run it": a short numbered quickstart skeleton (clone, create .env from .env.example,
-   seed data, run) with any step you cannot know marked "(maintainers: confirm command)" — my
-   technical teammates will correct commands before commit.
+3. "How to run it": a short numbered quickstart (clone, create .env from .env.example, seed
+   data, run) matching the repo's actual Makefile targets and pyproject setup — verify each
+   command against the repo before committing; mark any you cannot confirm "(maintainers:
+   confirm command)".
 4. "How it works": (a) the A/B/C permission semantics — A: reading a derived artifact requires
    satisfying ALL source lineage constraints (conjunction, not one strictest label); B:
    precompiled effective-policy bitmaps make the check one indexed lookup; C: redacted derivatives
@@ -94,43 +98,57 @@ Content requirements, all grounded in the three attached files (do not invent an
    the model worked out publicly in the track Discord (2 Jul); the implementation, live-Jira ACL
    sync, fail-closed cache, and the working product around it are ours. Never say the sponsor
    endorsed our design.
-5. A "Benchmarks & evidence" subsection under "How it works": a table with the sponsor's own
-   published metric vocabulary as rows — FNR, FPR, P50, P99, end-to-end overhead, ACL drift,
-   time-to-consistency, audit coverage — with columns "measured", "published threshold",
-   "pass/fail". Fill "measured" with [[WAIT:BENCH-SYNTH]] for the synthetic-protocol run and add
-   one row "P99 over the 25k-record real-incident (UCI) store" filled with [[WAIT:BENCH-UCI]].
-   State that expected labels come from an independent naive oracle, not the compiler being
-   measured. Below the table: one line naming all six adversarial attack tests verbatim (query
-   inference, metadata bypass, timing, collection, prompt injection, derived-memory) with a
-   pointer to tests/test_adversarial.py, and a link line to the evidence index
-   (docs/evidence/README.md) and the committed Venice /models dumps (docs/compliance/).
+5. A "Benchmarks & evidence" subsection under "How it works": the FULL metric table (see §3.1
+   below) — all 10 published metrics as rows, columns "measured / published threshold / pass-fail",
+   the independent-oracle note, the six attacks line, and the evidence links. Fill "measured"
+   with the [[WAIT]] tokens named in §3.1 until the numbers land.
 6. "Tech & sponsor APIs used": FIRST a subsection titled "Open-weight models (required
-   declaration)" — I will paste its exact content myself, so output the marker line
-   <<PASTE-MODELS-BLOCK-HERE>> followed by the two sentences I give you below, then the rest of
-   the stack (Venice API base URL, SQLite, Jira Service Management as live ACL source, uAgents/
-   Agentverse for the agent rails) in one short list. Include this portability line: "the
-   pipeline runs against any OpenAI-compatible open-weight endpoint; an Ollama-local profile
-   (qwen3:8b + bge-m3) is the offline fallback."
-   The two sentences: "No closed or proprietary model is called anywhere in the pipeline; the
-   only file that may name a model is precedent/models.py, and CI greps for violations." and
-   "Verification evidence: Venice /models dumps committed to docs/compliance/ (2026-07-03), each
-   pinned ID carrying its public huggingface.co weights URL."
+   declaration)" — output the marker line <<PASTE-MODELS-BLOCK-HERE>> (I paste the exact block
+   myself) followed by the two locked sentences from §2, then the rest of the stack (Venice API
+   base URL, SQLite, Jira Service Management as live ACL source, uAgents/Agentverse for the agent
+   rails) in one short list. Include this portability line: "the pipeline runs against any
+   OpenAI-compatible open-weight endpoint; an Ollama-local profile (qwen3:8b + bge-m3) is the
+   offline fallback."
 7. "What's next": 3 bullets max, durable-artifact framing (standalone library, conformance bench,
    hosted Watcher stays running) — no grand roadmap.
 8. "License": "Code: MIT (maintainers: confirm). Data: per-source licences — see the Data
    provenance section of the main repo README (UCI CC BY 4.0, TVmaze CC BY-SA, Kaggle CC0)."
 
-Honesty rules: every number must come from the attached files or be a [[WAIT:...]] token; the
+Honesty rules: every number must come from a source file or be a [[WAIT:...]] token; the
 C-flow is "designed + stubbed"; the 94.4% / 18.2h numbers from the evidence index MAY be quoted
 (they are measured) with their exact framing including the word "calendar" for the 18.2h.
-Output the complete README in one message if you can; if it is getting long, stop at the end of
-"How it works" and wait for me to say "continue".
 ```
 
-After it responds: replace `<<PASTE-MODELS-BLOCK-HERE>>` with the verbatim models block from §2 yourself (copy from CLAUDE-AVAILABLE-APIS.md — do not let the model retype it).
+After it responds: replace `<<PASTE-MODELS-BLOCK-HERE>>` with the verbatim models block from §2 yourself (copy from `CLAUDE-AVAILABLE-APIS.md` — do not let the model retype it).
 
-### Conversation B2 (Fri ~16:00) — .env.example + PR description
-New chat. Attach `CLAUDE-AVAILABLE-APIS.md` only. Paste:
+### 3.1 The full metric table (the green-table ambition — build ALL of it)
+
+This is stretch item 1 from BUILD-PLAN §5: hand the sponsor **their own rubric, filled in green**. Build every row now; each cell that waits on a number carries a `[[WAIT]]` token until T3's conformance run lands. Do not drop rows to the 4-metric fallback pre-emptively — the target is the complete table.
+
+Columns: **measured · published threshold · pass/fail**. Rows (all 10 published metrics):
+
+| Metric | Waiting token |
+|---|---|
+| FNR (false-negative / leak rate) | `[[WAIT:BENCH-SYNTH]]` |
+| FPR (false-positive rate) | `[[WAIT:BENCH-SYNTH]]` |
+| P50 latency | `[[WAIT:BENCH-SYNTH]]` |
+| P99 latency | `[[WAIT:BENCH-SYNTH]]` |
+| End-to-end overhead | `[[WAIT:BENCH-SYNTH]]` |
+| Derived-memory correctness (>99% target) | `[[WAIT:BENCH-SYNTH]]` |
+| ACL drift | `[[WAIT:BENCH-SYNTH]]` |
+| Time-to-consistency | `[[WAIT:BENCH-SYNTH]]` |
+| Audit coverage | `[[WAIT:BENCH-SYNTH]]` |
+| P99 over the **25k-record real-incident (UCI) store** | `[[WAIT:BENCH-UCI]]` |
+
+Plus, in the same subsection:
+- The **latency-vs-size curve** (O(1)/O(log-n)) as a one-line claim with `[[WAIT:BENCH-CURVE]]` for the figure/number, if T3 produces it.
+- **State the oracle-independence explicitly:** expected labels come from an independent naive-conjunction oracle, NOT the compiler being measured — so FNR isn't self-graded.
+- A single line naming **all six** adversarial attacks verbatim (query inference, metadata bypass, timing, collection, prompt injection, derived-memory) with the count `[[WAIT:ATTACKS]]` of 6 and a pointer to `tests/test_adversarial.py`.
+- A links line to the evidence index (`docs/evidence/README.md`) and the committed Venice `/models` dumps (`docs/compliance/`).
+
+### 3.2 The .env.example + PR description brief
+
+Drive your tool (source: `CLAUDE-AVAILABLE-APIS.md`) with something like:
 
 ```
 Two small artifacts for the same submission. No secrets may appear anywhere — variable names and
@@ -144,15 +162,17 @@ public URLs only.
    VENICE_EMBED_MODEL=text-embedding-bge-m3
    PRECEDENT_MODEL_BACKEND=venice   # or "local" for the Ollama fallback
    plus Jira placeholders (JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN, JIRA_PROJECT_KEY=MEDIA) and
-   the two issue-security level comments from the attached file if useful. Add a one-line header
+   the two issue-security level comments from the source file if useful. Add a one-line header
    comment: "Open-weight only — see README 'Open-weight models (required declaration)'."
    Mark anything you are unsure about with "(maintainers: confirm variable name)".
+   (Cross-check against the repo's own root .env.example, which is already Venice-only — keep them
+   consistent.)
 
 2. A PR description (the text box of the pull request itself), under 200 words:
    - one-paragraph summary of the entry (permission-aware memory library + working product);
-   - a "Submission timeline" note: "Skeleton opened at stand-up 3 Jul; synthetic bench + attack
-     results committed before the 21:00 freeze on 3 Jul; UCI realism run and demo-video link
-     pushed 4 Jul morning with a PR comment.";
+   - a "Submission timeline" note: "Skeleton opened in Phase 0; synthetic bench + attack results
+     committed before the code freeze; UCI realism run and demo-video link pushed Saturday morning
+     with a PR comment.";
    - a line: "Deadline note: the repo README says 3 Jul EOD, the track brief says 4 Jul before
      judging — we asked a track mentor which governs and will record the answer here: [[WAIT:
      MENTOR-ANSWER]]";
@@ -160,61 +180,54 @@ public URLs only.
      our team folder touched.
 ```
 
-### Conversation B3 (Fri ~19:45, when T3 sends the bench block) — fill the two bench cells
-T3 will email/WhatsApp a **BENCH BLOCK** as soon as the synthetic conformance run finishes (target 19:30–20:30; format below). New chat, no attachments. Paste:
+## 4. Filling the bench cells (once T3's numbers land)
+
+T3 runs the conformance bench + independent oracle + full adversarial suite (BUILD-PLAN §4, T3 item 3) against merged main **before the freeze**, and produces a results block in roughly the shape below. When it lands, rewrite ONLY the table with real values — keep the three columns, mark any metric the block does not contain as "not yet measured — realism run lands Saturday" (never an empty cell, never a bracket). The `[[WAIT:BENCH-UCI]]` row stays until the Saturday realism run.
+
+Because you both have the repo, this is a quick edit on your branch, not a relay — take T3's committed `RESULTS.md` (or block) directly and update the table. If the synthetic run slips past the freeze, apply the pre-ratified degraded rule: the table ships with threshold rows and the note "synthetic run committed by PR comment" — a late number is additive, a broken table is not.
+
+**Results-block shape (what T3's bench emits / what you read from `RESULTS.md`):**
 
 ```
-Here is my README's "Benchmarks & evidence" table with [[WAIT:BENCH-SYNTH]] tokens, and the
-measured results block my team just sent. Rewrite ONLY the table with real values, keeping the
-"measured / published threshold / pass/fail" columns, marking any metric the block does not
-contain as "not yet measured — realism run lands 4 Jul" (never an empty cell, never a bracket).
-The [[WAIT:BENCH-UCI]] row stays as-is (it fills Saturday).
-
-MY TABLE:
-[paste the table from your B1 draft]
-
-BENCH BLOCK FROM THE TEAM:
-[paste T3's block]
-```
-
-Email the updated table to T3 by **20:45** — it must be committed before the 21:00 freeze (G4). If the bench slips past 20:45, apply the pre-ratified degraded rule: the table ships with threshold rows and the note "synthetic run committed by PR comment", and T3 commits what exists — a late number is additive, a broken table is not.
-
-**BENCH BLOCK template (T3: copy from here):**
-
-```
-BENCH BLOCK — synthetic conformance run (from T3)
+synthetic conformance run
 FNR_pct = (deny-expected queries = N, leaks = N)
 FPR_pct =
 P50_ms =
 P99_ms =
 end_to_end_overhead_ms =
+derived_memory_correctness_pct =
 acl_drift_pct =
 time_to_consistency_s =
 audit_coverage = (pass/fail from tests/test_audit_coverage.py)
+latency_vs_size = (curve fit / points, if produced)
 attacks_passing = N of 6 (list any declared non-claims)
 ```
 
-## 4. The two cells that wait for bench numbers (the explicit list)
+### The cells that wait, and who fills them
 
 | Cell | Token | Arrives | Who fills |
 |---|---|---|---|
-| Benchmarks table, synthetic-protocol row values (FNR/FPR/P50/P99/overhead/drift/TTC) | `[[WAIT:BENCH-SYNTH]]` | Fri 19:30–20:45, BENCH BLOCK from T3 | N2 via Conversation B3, committed pre-freeze |
-| "P99 over the 25k-record UCI store" row | `[[WAIT:BENCH-UCI]]` | Sat morning realism run | **T3 directly** (paste value + PR comment) — no N2 session needed |
-
-Also waiting but NOT bench numbers: `[[WAIT:VIDEO-LINK]]` (Sat ~08:30, T3 pastes — before G6 08:45) and `[[WAIT:MENTOR-ANSWER]]` in the PR description (whenever the mentor replies; if never, T3 replaces it with "no answer received; we satisfied the earlier reading").
+| Benchmarks table, synthetic-protocol rows (FNR/FPR/P50/P99/overhead/derived-correctness/drift/TTC/audit) | `[[WAIT:BENCH-SYNTH]]` | Before the freeze, from T3's conformance run | **N2** — edit the table on your branch, committed pre-freeze |
+| Latency-vs-size curve | `[[WAIT:BENCH-CURVE]]` | With the conformance run, if T3 produces it | **N2** — same edit; if absent, delete the line |
+| Six-attacks pass count | `[[WAIT:ATTACKS]]` | With the conformance run | **N2** — "N of 6", list any declared non-claims |
+| "P99 over the 25k-record UCI store" row | `[[WAIT:BENCH-UCI]]` | Saturday morning realism run | **T3 directly** (paste value + PR comment) — no N2 session needed |
+| Demo video link | `[[WAIT:VIDEO-LINK]]` | Saturday, once the video is assembled | **T3 or N2** pastes before G6 |
+| Mentor deadline answer | `[[WAIT:MENTOR-ANSWER]]` | Whenever the mentor replies | **T3** — if never, replace with "no answer received; we satisfied the earlier reading" |
 
 ## 5. What DONE looks like
 
 - [ ] README uses the eight template headings verbatim, in order.
-- [ ] Models declaration block byte-identical to CLAUDE-AVAILABLE-APIS.md, in its own prominent subsection, with the two locked sentences.
-- [ ] Six attacks named in full; A/B/C named explicitly; fail-closed stated; oracle-independence stated; C-flow marked "designed + stubbed".
+- [ ] Models declaration block byte-identical to `CLAUDE-AVAILABLE-APIS.md`, in its own prominent subsection, with the two locked sentences.
+- [ ] The **full 10-metric table** exists (all rows present) with the measured/threshold/pass-fail columns; oracle-independence stated; the latency-vs-size curve line present.
+- [ ] Six attacks named in full; A/B/C named explicitly; fail-closed stated; C-flow marked "designed + stubbed".
 - [ ] Discord credit line present; the words "endorsed our design" absent.
-- [ ] 94.4% / 18.2h quoted with the word "calendar"; no other number outside the attachments or a `[[WAIT]]` token.
-- [ ] .env.example has zero ANTHROPIC/OPENAI variables and zero secret values.
-- [ ] README + .env.example + PR description emailed to T3 by **17:00 Friday**; B3 table update by **20:45**.
-- [ ] Final-ready check is T3's (G6): `[[WAIT` and `‹` both grep to zero in the team folder.
+- [ ] 94.4% / 18.2h quoted with the word "calendar"; no other number outside the source files or a `[[WAIT]]` token.
+- [ ] `.env.example` has zero ANTHROPIC/OPENAI variables and zero secret values; consistent with the repo root `.env.example`.
+- [ ] README + `.env.example` + PR description on your branch and handed to / merged by T3 before the **G2 freeze**; bench-cell edit committed before the freeze once T3's numbers land.
+- [ ] Final-ready check (with T3, at G4): `[[WAIT` and `‹` both grep to zero in the team folder.
 
 ## 6. Fallbacks
 
-- Free-tier cap mid-draft: WhatsApp T3 with which numbered requirement you reached; T3 reruns the remaining prompt on another seat (the prompts are owner-independent by design).
-- If Conversation B1's output drifts into invented numbers or roadmap fluff, reply: "Strip every claim not grounded in the attachments; replace with [[WAIT]] tokens or delete." Honesty outranks completeness — a shorter true README beats a longer embellished one, and the track judges reward the visible evidence discipline.
+- If your model rate-limits mid-draft, switch to your alternate tool — every requirement here is spec'd well enough that any capable model can run it. Nothing is blocked on a single seat.
+- If the draft drifts into invented numbers or roadmap fluff, tell your tool: "Strip every claim not grounded in the source files; replace with `[[WAIT]]` tokens or delete." Honesty outranks completeness — a shorter true README beats a longer embellished one, and the track judges reward the visible evidence discipline.
+- If the conformance run slips past the freeze, the table ships with threshold rows only + "synthetic run committed by PR comment"; T3 pushes the numbers as an additive PR comment. Never a broken table.
