@@ -1,0 +1,114 @@
+{
+  "attacks": {
+    "failed": 0,
+    "non_claims": [],
+    "passed": 6,
+    "ran": true,
+    "returncode": 0,
+    "total": 6,
+    "xfailed": 0
+  },
+  "audit": {
+    "audit_rows_written": 300,
+    "chain_verified": true,
+    "coverage": 1.0,
+    "decisions": 300
+  },
+  "conformance": {
+    "agree": 10000,
+    "allow_expected": 4781,
+    "category_breakdown": {
+      "derived": {
+        "allow": 584,
+        "deny": 676
+      },
+      "multi": {
+        "allow": 724,
+        "deny": 769
+      },
+      "public": {
+        "allow": 1745,
+        "deny": 0
+      },
+      "revoked": {
+        "allow": 0,
+        "deny": 800
+      },
+      "single": {
+        "allow": 1728,
+        "deny": 1015
+      },
+      "stale": {
+        "allow": 0,
+        "deny": 700
+      },
+      "tombstoned": {
+        "allow": 0,
+        "deny": 680
+      },
+      "unverified": {
+        "allow": 0,
+        "deny": 579
+      }
+    },
+    "deny_expected": 5219,
+    "disagreements": [],
+    "fnr_leaks": 0,
+    "fnr_rate": 0.0,
+    "fpr_outages": 0,
+    "fpr_rate": 0.0,
+    "mean_permitted_ms": 0.000285890384,
+    "n_queries": 10000,
+    "overhead_p99_ms": 0.013000410000000009,
+    "p50_check_ms": 0.010416,
+    "p50_permitted_ms": 0.00042332,
+    "p99_check_ms": 0.013000410000000009,
+    "p99_permitted_ms": 0.000445
+  },
+  "derived_memory": {
+    "agree": 3000,
+    "correctness": 1.0,
+    "disagree": 0,
+    "n_records": 1000,
+    "probes": 3000
+  },
+  "drift_ttc": {
+    "drift_after": 0.0,
+    "drift_before": 1.0,
+    "m_flips": 200,
+    "oracle_denied_immediately": 200,
+    "ttc_median_ms": 0.017959,
+    "ttc_p99_ms": 0.02089874999999998
+  },
+  "latency_curve": [
+    {
+      "n_records": 1000,
+      "p50_check_ms": 0.009208,
+      "p50_permitted_ms": 0.00041663999999999997,
+      "p99_check_ms": 0.010875,
+      "p99_permitted_ms": 0.0004400168
+    },
+    {
+      "n_records": 5000,
+      "p50_check_ms": 0.009292,
+      "p50_permitted_ms": 0.000415,
+      "p99_check_ms": 0.010917,
+      "p99_permitted_ms": 0.00046165679999999996
+    },
+    {
+      "n_records": 25000,
+      "p50_check_ms": 0.009625,
+      "p50_permitted_ms": 0.00042,
+      "p99_check_ms": 0.01133301,
+      "p99_permitted_ms": 0.00043832
+    },
+    {
+      "n_records": 100000,
+      "p50_check_ms": 0.010291,
+      "p50_permitted_ms": 0.00042168,
+      "p99_check_ms": 0.01225,
+      "p99_permitted_ms": 0.0004884096
+    }
+  ],
+  "seed": 4207
+}
