@@ -58,10 +58,12 @@
   off air. The fix was already documented."*) → cut to the programmatically-staged manual-loop
   time-lapse (`asset_manual_loop_timelapse.mp4`, Playwright-driven sim grind, 8× with a clock overlay —
   same asset as live beat 0; **built rights-safe, no broadcast footage, no humans filmed** — see V2).
-- **Caption (verbatim):** **Downtime: $600B/yr across the Global 2000 (Splunk 2026) — ~$200M per company**
+- **Caption (verbatim):** **Downtime: ~$200M per Global 2000 company, per year (Oxford Economics / Splunk 2024)**
 - **VO cue (`VO_shot1`):** "When the CrowdStrike outage took broadcasters off air, the fix was already documented — humans applied it by hand, thousands of times. One of us watched that loop every day inside Disney+ operations."
-- **Honesty note:** "$600B/yr … Splunk 2026" is paired in the same caption with "~$200M per company"
-  (Oxford/Splunk 2024) — the per-company figure is the load-bearing one; never the refuted "$400B".
+- **Honesty note:** the ONLY sanctioned downtime number is **"$200M/year per Global 2000 company
+  (Oxford Economics/Splunk 2024)"** (`final-numbers.md` §5). The **$600B/Global-2000 aggregate is
+  dropped** — it is not on `final-numbers.md` and §6 refutes Global-2000 aggregates ("$400B combined"
+  → use $200M/company). CAPTION-AUDITOR flag closed.
   Say "inside Disney+ operations", never a product/brand the operator worked inside. **The Sky News
   still is GONE** (rights question) — replaced by the built text-card; the VO names the CrowdStrike
   event (a factual reference, no footage) but the picture shows no broadcaster's frame.
