@@ -1,0 +1,18 @@
+# Gitleaks config — extend the default ruleset, allowlist ONE known-public string.
+#
+# The ASI:One "share this conversation" invite URL is a PUBLIC artifact by design:
+# it is published on the BasedAI PR, the DoraHacks BUIDL page, and the Fetch
+# deliverables so judges can open the demo conversation. Its high-entropy
+# `channelInviteKey` trips gitleaks' generic-api-key heuristic, but it is a share
+# link, not a credential. This allowlist is scoped to the asi1.ai invite-URL
+# pattern ONLY, so real secrets (Venice / Jira / Agentverse keys/tokens) are still
+# caught. See docs/evidence/LIVE-PROOFS.md for provenance.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public ASI:One shared-chat invite URL (a share link, not a credential)"
+regexTarget = "line"
+regexes = [
+  '''asi1\.ai/invite\?channelInviteKey=[A-Za-z0-9_-]+''',
+]
