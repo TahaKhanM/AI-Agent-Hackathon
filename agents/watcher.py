@@ -56,6 +56,11 @@ DESCRIPTION = (
 # shot 5) work verbatim. (case-insensitive)
 _APPROVE_WORDS = {"approve", "approved"}
 _REJECT_WORDS = {"reject", "rejected", "cancel", "abort"}
+# A negation next to an approve token contradicts it — "don't approve", "no, actually approve",
+# "never approve" must NOT execute; they re-present (P0.2). "no"/"not" only DIS-qualify an
+# approve; they never turn a reject into an approve, so "no, reject" still rejects.
+_NEGATIONS = {"no", "not", "dont", "don't", "never", "cancel", "stop", "wait", "hold",
+              "cant", "can't", "wont", "won't", "aint", "nope"}
 
 
 # --------------------------------------------------------------------------- #
@@ -263,6 +268,8 @@ def decide_from_reply(text: str) -> str | None:
         return None
     words = {w.strip(".,!?:;").lower() for w in text.split()}
     if words & _APPROVE_WORDS:
+        if words & _NEGATIONS:            # "don't approve" / "no, actually approve" -> re-present
+            return None
         return "approve"
     if words & _REJECT_WORDS:
         return "reject"

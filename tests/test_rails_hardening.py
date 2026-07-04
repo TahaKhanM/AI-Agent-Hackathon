@@ -133,6 +133,11 @@ def _texts(ctx: _FakeCtx) -> list[str]:
     ("sure", None),
     ("no worries", None),
     ("no thanks", None),
+    # a negation next to an approve token must NOT execute (evaluator finding) -> re-present
+    ("don't approve", None),
+    ("do not approve", None),
+    ("never approve this", None),
+    ("no, actually approve", None),
     ("approve?", None),           # any question re-presents even with an approve token
     ("should I approve?", None),
     ("what does this do?", None),
