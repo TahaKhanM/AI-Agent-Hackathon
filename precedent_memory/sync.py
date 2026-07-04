@@ -205,6 +205,28 @@ def sync(source, *, conn) -> dict:
     return {"available": True, "sources": list(snap), "changed": changed}
 
 
+def refresh_cached_freshness(conn) -> int:
+    """Re-affirm the CURRENTLY-cached ACLs as fresh: re-stamp every non-revoked acl_source's
+    last_verified_at to now and recompile its records, so restricted-but-authorised memory stays
+    readable in live mode instead of ageing past the freshness window.
+
+    This is the standalone-agent equivalent of the console's periodic sync loop (a write-behind
+    cache heartbeat) for the airplane-mode demo, where the local seeded store IS the source of
+    truth. It NEVER touches revoked sources (they stay dark — fail-closed preserved) and never
+    changes any constraint set — only the freshness stamp. Returns the number of sources refreshed.
+    """
+    if conn is None:
+        raise ValueError("refresh_cached_freshness() requires a conn")
+    now = db.utcnow_iso()
+    refreshed = 0
+    for s in conn.execute("SELECT id FROM acl_source WHERE revoked = 0").fetchall():
+        conn.execute("UPDATE acl_source SET last_verified_at = ? WHERE id = ?", (now, s["id"]))
+        store.recompile_for_source(conn, s["id"])
+        refreshed += 1
+    conn.commit()
+    return refreshed
+
+
 def _fail_closed(conn, reason: str) -> dict:
     """Source unreachable: mark every RESTRICTED source's freshness unknown so its
     derived memory is denied in live mode; recompile; audit. Public memory is left

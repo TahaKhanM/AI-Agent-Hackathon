@@ -106,9 +106,15 @@ def build_live_chat_protocol() -> Protocol:
             await ctx.send(sender, common.text_message(_degraded_reply(text)))
             return
         from precedent.tools import SimTools
+        from precedent_memory import sync as _sync
         conn = db.connect(os.environ["PRECEDENT_MEMORY_DB"])
         tools = SimTools(base_url=os.environ["PRECEDENT_SIM_URL"])
         try:
+            # Re-affirm the cached ACL source before serving (freshness heartbeat): this
+            # sync-less standalone process would otherwise let restricted-but-authorised memory
+            # age past the 60s window and fail-closed deny it (the console runs the equivalent
+            # 20s poll loop). Revoked sources stay dark — the refusal path is preserved.
+            _sync.refresh_cached_freshness(conn)
             answer = serve_chat_turn(text, sender, conn=conn, tools=tools, pending=_LIVE_PENDING)
         finally:
             conn.close()
@@ -182,7 +188,9 @@ def render_approval(req: ApprovalRequest, prepared) -> str:
     fix_summary = f"{req.risk_class} — apply {action} on {ref.get('object_type', '?')} "\
                   f"{ref.get('object_id', '?')}"
     rollback = "restore pre-state snapshot on any verification failure (auto)"
-    jira = f"Jira: <link-placeholder for {prepared.incident.incident_id}>"
+    # No angle brackets — chat/markdown renderers (e.g. ASI:One) treat <...> as an HTML tag
+    # and swallow the text inside it.
+    jira = f"Jira: ticket for {prepared.incident.incident_id} (link attached on execution)"
     return (
         f"Incident {prepared.incident.incident_id} — {prepared.class_key}\n"
         f"Retrieved fix: {fix_summary}\n"
