@@ -1,0 +1,15 @@
+{
+  "cross_boundary": {
+    "denials_audited": 1,
+    "disjoint_bundle_denied": true,
+    "public_mix_allowed": true,
+    "same_boundary_allowed": true
+  },
+  "probing_detection": {
+    "audited": 1,
+    "flagged": true,
+    "sweep_denials": 8,
+    "threshold": 5,
+    "throttled": true
+  }
+}
