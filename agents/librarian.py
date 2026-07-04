@@ -24,8 +24,13 @@ import os
 from uagents import Agent, Context
 
 from agents import common
-from agents.protocol import PRECEDENT_PROTOCOL, RetrievalResultMsg, TriageMsg
+from agents.protocol import (
+    RetrievalResultMsg,
+    TriageMsg,
+    build_precedent_protocol,
+)
 from precedent_memory import db, retrieve
+from precedent_memory.audit import audit
 
 AGENT_NAME = "precedent-librarian"
 
@@ -73,6 +78,26 @@ def serve_retrieval(msg: TriageMsg, *, conn) -> RetrievalResultMsg:
     )
 
 
+def _audit_sender_rejected(conn, sender: str, message: str, incident_id: str) -> None:
+    """Record a rails-authentication rejection (P0.3). Safe metadata only."""
+    audit("rails_sender_rejected", conn=conn, actor=sender,
+          rail=AGENT_NAME, message=message, incident_id=incident_id)
+    conn.commit()
+
+
+def guarded_serve_retrieval(msg: TriageMsg, *, sender: str, conn) -> RetrievalResultMsg:
+    """Rails-authenticated retrieval (P0.3a): a TriageMsg is answered ONLY when it comes
+    from our Watcher. Any other sender is rejected + AUDITED and gets an empty, content-free
+    verdict (fail-closed — never a leak, never a hit)."""
+    if not common.authorised_sender(sender, "watcher"):
+        _audit_sender_rejected(conn, sender, "TriageMsg", msg.incident_id)
+        return RetrievalResultMsg(
+            incident_id=msg.incident_id, principal_id=msg.principal,
+            permitted=False, hit_count=0, denied_count=0, denied_owner_team=None,
+        )
+    return serve_retrieval(msg, conn=conn)
+
+
 def build_librarian() -> Agent:
     """Construct the registerable Librarian (stable address from the env seed)."""
     librarian = Agent(
@@ -84,18 +109,22 @@ def build_librarian() -> Agent:
         publish_agent_details=True,
     )
 
-    @PRECEDENT_PROTOCOL.on_message(TriageMsg)
+    proto = build_precedent_protocol()   # P0.3(b): this agent's OWN protocol (only TriageMsg)
+
+    @proto.on_message(TriageMsg)
     async def _on_triage(ctx: Context, sender: str, msg: TriageMsg) -> None:
         # Each retrieval opens its own conn to the shared memory db (the caller owns
         # the handle; the library never opens a hidden global one).
         conn = db.connect(os.environ["PRECEDENT_MEMORY_DB"])
         try:
-            result = serve_retrieval(msg, conn=conn)
+            # P0.3(a): fail-closed sender allowlist — a forged triage is audited and gets
+            # a content-free empty verdict.
+            result = guarded_serve_retrieval(msg, sender=sender, conn=conn)
         finally:
             conn.close()
         await ctx.send(sender, result)
 
-    librarian.include(PRECEDENT_PROTOCOL, publish_manifest=True)
+    librarian.include(proto, publish_manifest=True)
     return librarian
 
 

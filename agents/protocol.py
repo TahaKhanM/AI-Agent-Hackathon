@@ -32,8 +32,21 @@ from precedent.contracts import (
 )
 from precedent.orchestrator import Prepared
 
-# One protocol object every agent includes; the version pins the wire shape.
-PRECEDENT_PROTOCOL = Protocol(name="precedent", version="1.0")
+# The manifest name/version pin the wire shape (identical across agents, so the published
+# Agentverse manifest name/version are unchanged). P0.3(b): each agent builds its OWN
+# Protocol instance via this factory and registers ONLY its own handler — a single shared
+# module-level Protocol object caused BOTH the Librarian's TriageMsg handler and the
+# Operator's PlanMsg handler to land on BOTH agents (cross-registration), and rebuilding
+# re-decorated the same object. A fresh instance per build isolates handlers and makes
+# rebuilds idempotent. Addresses are seed-derived, so they are unaffected.
+PROTOCOL_NAME = "precedent"
+PROTOCOL_VERSION = "1.0"
+
+
+def build_precedent_protocol() -> Protocol:
+    """A fresh PrecedentProtocol instance (identical name/version). Each agent builds its
+    own and registers only the one handler it owns."""
+    return Protocol(name=PROTOCOL_NAME, version=PROTOCOL_VERSION)
 
 
 # --------------------------------------------------------------------------- #

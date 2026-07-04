@@ -49,9 +49,13 @@ DESCRIPTION = (
     "approval gate with audit and rollback."
 )
 
-# Affirmative / negative reply vocabulary for the chat gate (case-insensitive).
-_APPROVE_WORDS = {"approve", "approved", "yes", "y", "ok", "okay", "go", "confirm", "ship"}
-_REJECT_WORDS = {"reject", "rejected", "no", "n", "cancel", "deny", "abort", "stop"}
+# P0.2 — approval vocabulary guard. ONLY an explicit approve/reject token decides. A bare
+# "ok"/"yes"/"go"/"y"/"n"/"no" or ANY reply containing "?" re-presents the gate rather than
+# executing/rejecting — an approval must be unambiguous, so "ok, what does this do?" can never
+# execute and "no worries" can never reject. "approve"/"reject" (the ASI:One video script,
+# shot 5) work verbatim. (case-insensitive)
+_APPROVE_WORDS = {"approve", "approved"}
+_REJECT_WORDS = {"reject", "rejected", "cancel", "abort"}
 
 
 # --------------------------------------------------------------------------- #
@@ -89,36 +93,82 @@ def build_chat_protocol(reply) -> Protocol:
 _LIVE_PENDING: dict[str, orchestrator.Prepared] = {}
 
 
-def build_live_chat_protocol() -> Protocol:
-    """The LIVE Chat Protocol: every ASI:One ChatMessage drives the FULL deterministic
-    loop via serve_chat_turn (report -> ONE gate message -> approve -> execute -> audit
-    hash). Opens the shared memory db + typed SimTools LAZILY at message time (like the
-    Operator's on_plan), so construction stays offline/network-free and the address is
-    stable across the handler swap. With no execution target configured it degrades to
-    L0 (triage/classify only) — never executes. RULE 2: the STANDING branch is zero-LLM."""
-    chat_proto = Protocol(spec=chat_protocol_spec)
+# P0.1 — a judge who opens a session or sends a mid-turn message must ALWAYS get a reply.
+_DEGRADED_TURN_REPLY = (
+    "Sorry — I hit a temporary problem handling that turn. Nothing was executed and no "
+    "restricted content was disclosed. Please try again in a moment (for example, say "
+    "\"incident 1\")."
+)
 
-    @chat_proto.on_message(ChatMessage)
-    async def _on_chat(ctx: Context, sender: str, msg: ChatMessage) -> None:
+
+def greeting() -> str:
+    """First-contact greeting (StartSession / empty message): what Precedent does + the three
+    demo incidents with example phrasing. P0.1: replaces the unsolicited 'Couldn't identify the
+    incident class...' a judge used to see the moment they opened a chat."""
+    return (
+        "Precedent Watcher — I retrieve your organisation's own documented fix and run it "
+        "behind an approval gate, with audit and rollback. Three incidents are ready to try:\n"
+        "  1) EPG publish failure — the evening guide is blank "
+        "(e.g. \"our 9pm EPG publish failed, error 4012\").\n"
+        "  2) Duplicate schedule slot — the same show booked twice "
+        "(e.g. \"incident 2 — duplicate slot\").\n"
+        "  3) VOD rights-window breach — a title still on demand past its licence "
+        "(e.g. \"incident 3 — rights window expired\").\n"
+        "Report one in plain English (or say \"incident 1/2/3\") and I'll triage it."
+    )
+
+
+async def run_live_chat(ctx: Context, sender: str, msg: ChatMessage) -> None:
+    """The LIVE chat turn, GUARDED so the sender ALWAYS gets a reply (never ack-then-silence,
+    P0.1). An empty / StartSession-only message greets with the three demo incidents; any
+    failure (sim outage, missing env, a mid-turn error) yields a graceful degraded message —
+    no stack trace, nothing restricted disclosed, nothing executed."""
+    try:
         await ctx.send(sender, common.ack_for(msg))
         text = common.text_of(msg)
+        if not text:                          # StartSession / empty -> greet, DB/sim not needed
+            await ctx.send(sender, common.text_message(greeting()))
+            return
         if _degraded():                       # hosted L0: triage/classify, never execute
             await ctx.send(sender, common.text_message(_degraded_reply(text)))
             return
         from precedent.tools import SimTools
         from precedent_memory import sync as _sync
         conn = db.connect(os.environ["PRECEDENT_MEMORY_DB"])
-        tools = SimTools(base_url=os.environ["PRECEDENT_SIM_URL"])
         try:
-            # Re-affirm the cached ACL source before serving (freshness heartbeat): this
-            # sync-less standalone process would otherwise let restricted-but-authorised memory
-            # age past the 60s window and fail-closed deny it (the console runs the equivalent
-            # 20s poll loop). Revoked sources stay dark — the refusal path is preserved.
+            tools = SimTools(base_url=os.environ["PRECEDENT_SIM_URL"])
+            # Re-affirm the cached ACL source before serving (freshness heartbeat). Gated
+            # (P0.6): a real sync tick when a live source is configured, a heartbeat only in
+            # airplane mode — never masks an un-polled upstream tightening. Revoked sources
+            # stay dark, so the refusal path is preserved.
             _sync.refresh_cached_freshness(conn)
             answer = serve_chat_turn(text, sender, conn=conn, tools=tools, pending=_LIVE_PENDING)
         finally:
             conn.close()
         await ctx.send(sender, common.text_message(answer))
+    except Exception as exc:                  # noqa: BLE001 — ALWAYS reply; never leak a trace
+        try:
+            ctx.logger.warning(f"watcher live chat turn failed: {exc!r}")
+        except Exception:                     # pragma: no cover — logging must never mask reply
+            pass
+        try:
+            await ctx.send(sender, common.text_message(_DEGRADED_TURN_REPLY))
+        except Exception:                     # pragma: no cover — best-effort final reply
+            pass
+
+
+def build_live_chat_protocol() -> Protocol:
+    """The LIVE Chat Protocol: every ASI:One ChatMessage drives the FULL deterministic loop
+    via run_live_chat (guarded report -> ONE gate message -> approve -> execute -> audit hash).
+    Opens the shared memory db + typed SimTools LAZILY at message time (like the Operator's
+    on_plan), so construction stays offline/network-free and the address is stable across the
+    handler swap. With no execution target configured it degrades to L0 (triage/classify only)
+    — never executes. RULE 2: the STANDING branch is zero-LLM."""
+    chat_proto = Protocol(spec=chat_protocol_spec)
+
+    @chat_proto.on_message(ChatMessage)
+    async def _on_chat(ctx: Context, sender: str, msg: ChatMessage) -> None:
+        await run_live_chat(ctx, sender, msg)
 
     @chat_proto.on_message(ChatAcknowledgement)
     async def _on_ack(ctx: Context, sender: str, msg: ChatAcknowledgement) -> None:
@@ -203,9 +253,13 @@ def render_approval(req: ApprovalRequest, prepared) -> str:
 
 
 def decide_from_reply(text: str) -> str | None:
-    """Map a free-text chat reply to 'approve' | 'reject' | None (unrecognised).
-    Word-level match so 'yes please' approves and 'no thanks' rejects."""
+    """Map a free-text chat reply to 'approve' | 'reject' | None (re-present). P0.2: a reply
+    containing '?' is never a decision (a question re-presents), and only an explicit
+    approve/reject token counts — a bare 'ok'/'yes'/'go'/'no' returns None so it re-presents
+    the gate rather than accidentally executing or rejecting."""
     if not text:
+        return None
+    if "?" in text:                       # a question is never a decision — re-present
         return None
     words = {w.strip(".,!?:;").lower() for w in text.split()}
     if words & _APPROVE_WORDS:
@@ -308,6 +362,8 @@ def serve_chat_turn(text: str, sender: str, *, conn, tools, pending: dict,
     (sender -> Prepared) carries an open gate across the two turns; the DB `approval`
     ledger holds its hard TTL. Composes orchestrator.prepare / commit_execution — the
     deterministic kernel — never an LLM, for every permission/risk/gate decision."""
+    if not (text or "").strip():          # P0.1: empty / StartSession -> greet, don't guess
+        return greeting()
     approval.ensure_table(conn)
     # 1) fail-closed sweep FIRST: age out any expired gates, and drop their in-process
     #    Prepared in lock-step so a late 'approve' can never find a live plan.

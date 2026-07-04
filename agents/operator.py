@@ -23,10 +23,16 @@ import os
 from uagents import Agent, Context
 
 from agents import common
-from agents.protocol import PRECEDENT_PROTOCOL, PlanMsg, ResultMsg, prepared_from_plan_msg
+from agents.protocol import (
+    PlanMsg,
+    ResultMsg,
+    build_precedent_protocol,
+    prepared_from_plan_msg,
+)
 from precedent import orchestrator
 from precedent.tools import SimTools
 from precedent_memory import db
+from precedent_memory.audit import audit
 
 AGENT_NAME = "precedent-operator"
 
@@ -92,6 +98,29 @@ def serve_execution(msg: PlanMsg, *, conn, tools, trace=None) -> ResultMsg:
     )
 
 
+def _audit_sender_rejected(conn, sender: str, message: str, incident_id: str) -> None:
+    """Record a rails-authentication rejection (P0.3). Safe metadata only — the offending
+    sender address + which message it forged, never any plan content."""
+    audit("rails_sender_rejected", conn=conn, actor=sender,
+          rail=AGENT_NAME, message=message, incident_id=incident_id)
+    conn.commit()
+
+
+def guarded_serve_execution(msg: PlanMsg, *, sender: str, conn, tools, trace=None) -> ResultMsg:
+    """Rails-authenticated execution (P0.3a): a PlanMsg is executed ONLY when it comes from
+    our Watcher (the seed-derived allowlist address / WATCHER_ADDRESS override). Any other
+    sender — the address is public, a forged `decision="standing"` plan would otherwise run
+    with no tamper check — is rejected and AUDITED, and NOTHING executes (fail-closed)."""
+    if not common.authorised_sender(sender, "watcher"):
+        _audit_sender_rejected(conn, sender, "PlanMsg", msg.incident_id)
+        return ResultMsg(
+            incident_id=msg.incident_id, plan_hash=msg.plan_hash,
+            verified=False, rolled_back=False, outcome="unauthorised_sender",
+            audit_hash=_audit_tail_hash(conn), hop_trail=[],
+        )
+    return serve_execution(msg, conn=conn, tools=tools, trace=trace)
+
+
 def build_operator() -> Agent:
     """Construct the registerable Operator (stable address from the env seed)."""
     operator = Agent(
@@ -103,17 +132,24 @@ def build_operator() -> Agent:
         publish_agent_details=True,
     )
 
-    @PRECEDENT_PROTOCOL.on_message(PlanMsg)
+    proto = build_precedent_protocol()   # P0.3(b): this agent's OWN protocol (only PlanMsg)
+
+    @proto.on_message(PlanMsg)
     async def _on_plan(ctx: Context, sender: str, msg: PlanMsg) -> None:
         conn = db.connect(os.environ["PRECEDENT_MEMORY_DB"])
-        tools = SimTools(base_url=os.environ["PRECEDENT_SIM_URL"])
         try:
+            # P0.3(a): fail-closed sender allowlist — a forged plan is audited, never run,
+            # and gets no reply (no amplification back to an unknown sender).
+            if not common.authorised_sender(sender, "watcher"):
+                _audit_sender_rejected(conn, sender, "PlanMsg", msg.incident_id)
+                return
+            tools = SimTools(base_url=os.environ["PRECEDENT_SIM_URL"])
             result = serve_execution(msg, conn=conn, tools=tools)
         finally:
             conn.close()
         await ctx.send(sender, result)
 
-    operator.include(PRECEDENT_PROTOCOL, publish_manifest=True)
+    operator.include(proto, publish_manifest=True)
     return operator
 
 

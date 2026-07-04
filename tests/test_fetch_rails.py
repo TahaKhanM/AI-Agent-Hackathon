@@ -204,11 +204,15 @@ def test_make_decision_binds_sender_address():
 
 def test_decide_from_reply_maps_approve_and_reject():
     from agents import watcher
+    # P0.2: only an explicit approve/reject token decides; bare "ok"/"yes"/"go"/"no"
+    # and any reply containing "?" RE-PRESENT (None) rather than executing/rejecting.
     assert watcher.decide_from_reply("approve") == "approve"
-    assert watcher.decide_from_reply("yes please") == "approve"
-    assert watcher.decide_from_reply("ok go ahead") == "approve"
     assert watcher.decide_from_reply("reject") == "reject"
-    assert watcher.decide_from_reply("no thanks") == "reject"
+    assert watcher.decide_from_reply("no, reject") == "reject"   # explicit token present
+    assert watcher.decide_from_reply("yes please") is None       # was approve — now re-presents
+    assert watcher.decide_from_reply("ok go ahead") is None      # was approve — now re-presents
+    assert watcher.decide_from_reply("no thanks") is None        # was reject — now re-presents
+    assert watcher.decide_from_reply("ok, what does this do?") is None
     assert watcher.decide_from_reply("what does this do?") is None
     assert watcher.decide_from_reply("") is None
 

@@ -40,6 +40,15 @@ SEED_ENV = {
     "operator": "OPERATOR_AGENT_SEED",
 }
 
+# Env var names holding the PUBLIC agent addresses (used for the rails sender allowlist,
+# P0.3). Public, not secret — the address is derivable from the seed. An explicit override
+# lets a deployment pin the authorising Watcher address without re-deriving from the seed.
+ADDRESS_ENV = {
+    "watcher": "WATCHER_ADDRESS",
+    "librarian": "LIBRARIAN_ADDRESS",
+    "operator": "OPERATOR_ADDRESS",
+}
+
 
 def resolve_seed(name: str) -> str:
     """Stable seed for an agent. Production: the env var in SEED_ENV. Local dev: a
@@ -50,6 +59,26 @@ def resolve_seed(name: str) -> str:
         return os.environ[env]
     # Local-dev placeholder — NOT a registered secret; documented in agents/README.md.
     return f"precedent-{name}-local-dev-seed-set-{env or 'SEED'}-for-production"
+
+
+def agent_address(name: str) -> str:
+    """The stable PUBLIC address of one of our agents. Prefers an explicit env override
+    (ADDRESS_ENV); otherwise derives it from the seed exactly as uAgents' Agent does
+    (Identity.from_seed(seed, 0)) — no Agent construction, no network. RULE 2/3: this is a
+    deterministic identity check, never an LLM decision."""
+    env = ADDRESS_ENV.get(name)
+    if env and os.environ.get(env):
+        return os.environ[env]
+    from uagents.crypto import Identity
+    return Identity.from_seed(resolve_seed(name), 0).address
+
+
+def authorised_sender(sender: str, role: str = "watcher") -> bool:
+    """True iff `sender` is our own `role` agent's address (the rails allowlist, P0.3).
+    Fail-closed: an empty/unknown sender is never authorised. The Librarian and Operator
+    only ever accept messages the Watcher originated; a forged sender is rejected+audited
+    and nothing executes."""
+    return bool(sender) and sender == agent_address(role)
 
 
 def use_mailbox() -> bool:
