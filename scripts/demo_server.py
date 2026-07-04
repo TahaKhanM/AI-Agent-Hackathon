@@ -44,48 +44,83 @@ def _result(n, res):
             "outcome": res.step_results[0].get("outcome")}
 
 
+def _expired(req) -> bool:
+    """True when a pending ApprovalRequest is past its TTL (or unparseable -> fail-closed)."""
+    ts = db.parse_iso(getattr(req, "expires_at", "") or "")
+    return ts is None or db.utcnow() >= ts
+
+
+def _prune_pending() -> None:
+    """P0.7(c): drop expired entries from the in-process pending map so a dropped hold never
+    lingers past its TTL (the DB `approval` ledger ages it out too — this keeps the map honest)."""
+    for inc_id, prepared in list(_PENDING.items()):
+        req = getattr(prepared, "approval_request", None)
+        if req is None or _expired(req):
+            _PENDING.pop(inc_id, None)
+
+
 @app.post("/api/drive/{n}")
-def api_drive(n: int, approve: bool = True, hold: bool = False, principal: str | None = None):
-    """Run the REAL orchestrator for incident n IN this process, sharing STATE.conn under
-    STATE's lock and streaming every hop to the live trace panel. approve=true auto-approves
-    the slow-path (rehearsal); hold=true instead PAUSES at the gate — records a pending
-    approval (10-min TTL) for a human to Approve via /api/drive/{n}/approve. The fast-path
-    (STANDING) needs no approval and runs straight through, zero-LLM."""
+def api_drive(n: int, approve: bool = True, hold: bool = False, flake: bool = False,
+              principal: str | None = None):
+    """Run the REAL orchestrator for incident n IN this process, streaming every hop to the live
+    trace panel. approve=true auto-approves the slow-path (rehearsal); hold=true instead PAUSES at
+    the gate — records a pending approval (10-min TTL) for a human to Approve via
+    /api/drive/{n}/approve. The fast-path (STANDING) needs no approval and runs straight through,
+    zero-LLM. flake=true arms the one-shot verification failure ONLY on a path that will execute
+    (P0.7d), so it can never stay armed and poison the next drive.
+
+    P0.4: STATE.conn (one writer, no cross-connection contention) is touched ONLY under STATE._lock,
+    and the slow SMART rationale (venice.chat) runs OUTSIDE the lock — so /api/state stays
+    responsive and the trace panel streams (prepare hops, then the model 'thinking' window, then
+    execution) instead of appearing all-at-once after the drive."""
     principal = principal or STATE.principal
-    with STATE._lock:
-        sim = SimTools(base_url=SIM_URL)
-        p = sim.incident(n)
-        inc = IncidentEvent(incident_id=p["incident_id"], raw_text=p["raw_text"],
-                            source="sim", observed_at=p["observed_at"])
-        trace = console_link.in_process_trace(STATE)
+    sim = SimTools(base_url=SIM_URL)
+    p = sim.incident(n)                          # sim read — outside the lock
+    inc = IncidentEvent(incident_id=p["incident_id"], raw_text=p["raw_text"],
+                        source="sim", observed_at=p["observed_at"])
+    trace = console_link.in_process_trace(STATE)
+    with STATE._lock:                            # brief: deterministic prepare (no LLM under lock)
         prepared = orchestrator.prepare(inc, structured=p["structured"], conn=STATE.conn,
-                                        tools=sim, principal=principal, trace=trace)
-        if prepared.outcome in ("refused", "escalated"):
-            return _result(n, prepared.result)
-        if prepared.fast:
+                                        tools=sim, principal=principal, trace=trace,
+                                        defer_rationale=True)
+    if prepared.outcome in ("refused", "escalated"):
+        return _result(n, prepared.result)       # non-executing path -> a flake is NEVER armed
+    if prepared.fast:
+        if flake:
+            sim.arm_flake()                      # armed right before an execution consumes it
+        with STATE._lock:
             return _result(n, orchestrator.commit_execution(prepared, conn=STATE.conn,
                                                             tools=sim, trace=trace))
-        if hold:   # pause at the gate — real held approval with TTL (fail-closed)
+    # slow-path: the SMART rationale prose is a network/LLM call — run it OUTSIDE the lock.
+    orchestrator.fill_rationale(prepared)
+    if hold:   # pause at the gate — real held approval with TTL (fail-closed)
+        with STATE._lock:
+            _prune_pending()
             approval.record_pending(STATE.conn, prepared.approval_request, sender_address=principal)
-            _PENDING[inc.incident_id] = prepared
-            return {"incident": n, "status": "pending_approval",
-                    "plan_hash": prepared.approval_request.plan_hash,
-                    "expires_at": prepared.approval_request.expires_at}
-        decision = _auto_approve("ops-lead")(prepared.approval_request) if approve else None
+        _PENDING[inc.incident_id] = prepared
+        return {"incident": n, "status": "pending_approval",
+                "plan_hash": prepared.approval_request.plan_hash,
+                "expires_at": prepared.approval_request.expires_at}
+    decision = _auto_approve("ops-lead")(prepared.approval_request) if approve else None
+    if decision is not None and flake:           # only arm when an execution WILL consume it
+        sim.arm_flake()
+    with STATE._lock:
         return _result(n, orchestrator.commit_execution(prepared, conn=STATE.conn, tools=sim,
                                                         trace=trace, decision=decision))
 
 
 @app.post("/api/drive/{n}/approve")
 def api_drive_approve(n: int, principal: str = "ops-lead"):
-    """Resume a HELD drive: a human Approve. Fail-closed — an expired/absent pending
-    approval NEVER executes (non-action)."""
+    """Resume a HELD drive: a human Approve. Fail-closed — an expired/absent pending approval
+    NEVER executes (non-action). commit_execution makes no LLM call, so STATE._lock is held only
+    for the brief deterministic execute/verify against the local sim."""
     inc_id = f"INC-{n}"
     with STATE._lock:
         approval.expire_stale(STATE.conn)                 # sweep first
         row = approval.lookup_pending(STATE.conn, inc_id)
         prepared = _PENDING.get(inc_id)
         if row is None or prepared is None:
+            _PENDING.pop(inc_id, None)                    # P0.7(c): drop a stale in-process entry
             return {"incident": n, "status": "no_live_approval",
                     "detail": "expired or absent — non-action (fail-closed)"}
         decision = ApprovalDecision(incident_id=inc_id, plan_hash=row["plan_hash"],
@@ -102,9 +137,20 @@ def api_drive_approve(n: int, principal: str = "ops-lead"):
 
 @app.post("/api/drive/{n}/flake")
 def api_arm_flake(n: int):
-    """Arm the one-shot verification flake (the recovery beat), then drive incident n."""
-    SimTools(base_url=SIM_URL).arm_flake()
-    return api_drive(n, approve=False)
+    """The recovery beat: drive incident n with the one-shot verification flake armed. P0.7(d):
+    the flake is armed INSIDE the drive, only on a path that will execute — never before a
+    refused/escalated incident (which would leave it armed to poison the next drive)."""
+    return api_drive(n, flake=True)
+
+
+def _sync_tick() -> None:
+    """One ACL re-sync tick (runs in a worker thread — never on the event loop). Holds
+    STATE._lock only for the brief sync write, and COMMITS so STATE.conn never lingers with an
+    open write transaction that would block the drive's separate connection (P0.4 / the
+    sync()-never-commits footgun)."""
+    with STATE._lock:
+        syncmod.sync(STATE.source, conn=STATE.conn)
+        STATE.conn.commit()
 
 
 @app.on_event("startup")
@@ -113,8 +159,7 @@ async def _start_sync_loop() -> None:
         while True:
             await asyncio.sleep(_SYNC_INTERVAL_S)
             try:
-                with STATE._lock:
-                    syncmod.sync(STATE.source, conn=STATE.conn)   # refresh ACL freshness
+                await asyncio.to_thread(_sync_tick)   # P0.4: never freeze the event loop
             except Exception:  # noqa: BLE001 — best-effort; a hiccup must not kill the server
                 pass
     asyncio.create_task(_loop())

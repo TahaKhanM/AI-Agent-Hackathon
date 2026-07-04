@@ -102,7 +102,7 @@ def _emitter(incident, conn, trace, actor):
 # --------------------------------------------------------------------------- #
 def prepare(incident: IncidentEvent, *, structured: dict | None = None, conn=None, tools=None,
             principal: str = "scheduling-ops", trace=None, mode: str = "live",
-            actor: str | None = None) -> Prepared:
+            actor: str | None = None, defer_rationale: bool = False) -> Prepared:
     if conn is None or tools is None:
         raise ValueError("prepare requires the shared conn and a SimTools client")
     trace = trace or _noop_trace
@@ -135,6 +135,18 @@ def prepare(incident: IncidentEvent, *, structured: dict | None = None, conn=Non
                                        extra={"denied_count": bundle.denied_count,
                                               "denied_owner_team": bundle.denied_owner_team}))
 
+    # P0.5 (Rule 2 — close the grey zone): only a DETERMINISTICALLY-confirmed class may
+    # select an executable action. An LLM-proposed class has passed the ACL gate but was not
+    # fingerprint-confirmed — route it to human confirmation / the investigation dossier, never
+    # an automated plan (nothing a model outputs can pick the action, even one hop upstream).
+    if method != "deterministic":
+        emit("escalated", "class proposed but not fingerprint-confirmed — human confirmation "
+             "required (no automated plan built)", method=method, class_key=class_key)
+        return Prepared(incident, "escalated",
+                        result=_result(incident, "", outcome="escalated",
+                                       extra={"reason": "not_deterministic_extraction",
+                                              "method": method}))
+
     assessment = policy.assess(triage)
     rule = policy.rule_for(class_key)
     emit("risk_assessed", f"{assessment.risk_class} rule={assessment.policy_rule_id} "
@@ -155,6 +167,14 @@ def prepare(incident: IncidentEvent, *, structured: dict | None = None, conn=Non
 
     snap = tools.snapshot(ref["service"], ref["object_type"], ref["object_id"])
     pre_state = snap.get("fields", {})
+    # P0.7(a): never build a plan on an empty pre-state snapshot — there would be nothing to
+    # roll back to (a silent fail-open in the rollback story). Escalate instead.
+    if not pre_state:
+        emit("escalated", "empty pre-state snapshot — refusing to build a plan with no "
+             "rollback baseline", reason="empty_snapshot", ref=ref)
+        return Prepared(incident, "escalated",
+                        result=_result(incident, "", outcome="escalated",
+                                       extra={"reason": "empty_snapshot"}))
     steps = [TypedToolCall(tool=rule["action_type"],
                            args={_id_arg(ref["object_type"]): ref["object_id"]})]
     rollback = [TypedToolCall(tool="restore", args={**ref, "snapshot": pre_state})]
@@ -172,8 +192,11 @@ def prepare(incident: IncidentEvent, *, structured: dict | None = None, conn=Non
                         class_key=class_key, fingerprint=fingerprint, rule=rule,
                         assessment=assessment, fast=True)
 
-    # slow-path: SMART writes rationale PROSE only (rule 2), then request approval.
-    assessment.rationale_text = _smart_rationale(assessment) or assessment.rationale_text
+    # slow-path: SMART writes rationale PROSE only (rule 2), then request approval. The caller may
+    # defer_rationale=True to run that (network/LLM) call OUTSIDE any state lock (P0.4) via
+    # fill_rationale(prepared); the risk class + gate are already fixed here regardless.
+    if not defer_rationale:
+        assessment.rationale_text = _smart_rationale(assessment) or assessment.rationale_text
     req = ApprovalRequest(incident_id=incident.incident_id, plan_hash=plan_hash,
                           risk_class=assessment.risk_class, ladder_level=assessment.ladder_level,
                           requested_at=db.utcnow_iso(), expires_at=_expiry_iso(), channel="console")
@@ -213,13 +236,24 @@ def commit_execution(prepared: Prepared, *, conn, tools, trace=None,
              decision="approve", approver=decision.approver_principal, plan_hash=plan.plan_hash)
 
     # EXECUTE typed calls (snapshot already captured in prepare() — rollback ordering holds).
+    # P0.7(b): honour each step's `ok` — a tool that reports ok=false is an execution failure,
+    # audited explicitly and treated exactly like a verification failure (rollback + demote),
+    # never silently as success.
+    ref = prepared.ref
+    exec_failed_step: str | None = None
     for step in plan.steps:
-        tools.execute(step.tool, step.args)
+        outcome = tools.execute(step.tool, step.args)
+        if isinstance(outcome, dict) and outcome.get("ok") is False:
+            exec_failed_step = step.tool
+            emit("execute_failed", f"{step.tool} reported ok=false "
+                 f"({outcome.get('detail', 'no detail')}) — treating as verification failure",
+                 plan_hash=plan.plan_hash, tool=step.tool)
+            break
     emit("executed", f"{plan.steps[0].tool} on {prepared.ref['object_type']} "
          f"{prepared.ref['object_id']}", plan_hash=plan.plan_hash)
 
-    ref = prepared.ref
-    verdict = tools.verify(ref["service"], ref["object_type"], ref["object_id"])
+    verdict = ({"verified": False} if exec_failed_step
+               else tools.verify(ref["service"], ref["object_type"], ref["object_id"]))
     if verdict.get("verified"):
         emit("verified", "post-state healthy", plan_hash=plan.plan_hash)
         ladder.on_verification_result(prepared.class_key, True, False, conn=conn, actor=actor,
@@ -278,6 +312,18 @@ def _memorise(incident, ref, class_key, fingerprint, rule, assessment, *, conn, 
                 "body": body},
         lineage_source_refs=list(rule.get("lineage_refs") or []), class_key=class_key)
     return store.store_memory_write(mw, principal_ctx={"principal": actor}, conn=conn)
+
+
+def fill_rationale(prepared: Prepared) -> Prepared:
+    """Compute the slow-path SMART rationale PROSE for a `prepared` gate (no conn, no lock — a
+    pure network/LLM call). Used when prepare(defer_rationale=True) skipped it so the (seconds-
+    long) call runs OUTSIDE the state lock (P0.4). No-op for fast/refused/escalated preps."""
+    if prepared.assessment is None or prepared.fast or prepared.outcome != "ready":
+        return prepared
+    text = _smart_rationale(prepared.assessment)
+    if text:
+        prepared.assessment.rationale_text = text
+    return prepared
 
 
 def _smart_rationale(assessment) -> str:
