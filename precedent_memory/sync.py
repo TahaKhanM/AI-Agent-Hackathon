@@ -205,24 +205,46 @@ def sync(source, *, conn) -> dict:
     return {"available": True, "sources": list(snap), "changed": changed}
 
 
-def refresh_cached_freshness(conn) -> int:
-    """Re-affirm the CURRENTLY-cached ACLs as fresh: re-stamp every non-revoked acl_source's
-    last_verified_at to now and recompile its records, so restricted-but-authorised memory stays
-    readable in live mode instead of ageing past the freshness window.
+def live_source_configured() -> bool:
+    """True when a LIVE Jira ACL source is configured (all four JiraPermissionSource env vars).
+    P0.6: the freshness heartbeat is only sound when the local seeded store IS the source of
+    truth (airplane mode). With a live source, re-affirming freshness without polling would let
+    an un-polled upstream *tightening* serve indefinitely — so a real sync tick is used instead."""
+    return all(os.environ.get(name) for name in JiraPermissionSource.ENV)
 
-    This is the standalone-agent equivalent of the console's periodic sync loop (a write-behind
-    cache heartbeat) for the airplane-mode demo, where the local seeded store IS the source of
-    truth. It NEVER touches revoked sources (they stay dark — fail-closed preserved) and never
-    changes any constraint set — only the freshness stamp. Returns the number of sources refreshed.
-    """
+
+def refresh_cached_freshness(conn, *, source=None) -> int:
+    """Keep restricted-but-authorised memory readable across the freshness window — GATED so it
+    never masks an un-polled upstream tightening (P0.6). Two modes, both AUDITED:
+
+    - Live source configured (or an explicit `source`): run a REAL sync() tick (poll the source,
+      apply changes, fail-closed on outage). A stale window therefore DENIES until a genuine sync,
+      never on a blind re-stamp.
+    - Airplane mode (no live source): the local seeded store IS the source of truth, so re-affirm
+      every non-revoked acl_source's last_verified_at (a write-behind cache heartbeat). Revoked
+      sources are never touched (they stay dark — fail-closed preserved).
+
+    Returns the count of sources refreshed (heartbeat) or changed (sync tick)."""
     if conn is None:
         raise ValueError("refresh_cached_freshness() requires a conn")
+    if source is None and live_source_configured():
+        source = JiraPermissionSource()
+    if source is not None:                       # live: a genuine poll, never a blind re-stamp
+        result = sync(source, conn=conn)
+        audit.audit("freshness_sync_tick", conn=conn, actor="sync",
+                    available=bool(result.get("available", False)),
+                    changed=len(result.get("changed", [])))
+        conn.commit()
+        return len(result.get("changed", []))
+    # airplane mode: heartbeat the local source of truth.
     now = db.utcnow_iso()
     refreshed = 0
     for s in conn.execute("SELECT id FROM acl_source WHERE revoked = 0").fetchall():
         conn.execute("UPDATE acl_source SET last_verified_at = ? WHERE id = ?", (now, s["id"]))
         store.recompile_for_source(conn, s["id"])
         refreshed += 1
+    audit.audit("freshness_heartbeat", conn=conn, actor="sync",
+                refreshed=refreshed, mode="airplane")
     conn.commit()
     return refreshed
 
