@@ -21,11 +21,35 @@ fake/local affordances are labelled "local-demo".
 """
 from __future__ import annotations
 
+import json
 import os
+import pathlib
 import threading
 
 from precedent_memory import audit, db, retrieve, store
 from precedent_memory import sync as syncmod
+
+# The committed extractor-robustness headline (the ONE number the chip/slide/README/BUIDL cite,
+# P1.7). Read once from the source of truth; the console only DISPLAYS it, never recomputes it.
+_ROBUSTNESS_PATH = (pathlib.Path(__file__).resolve().parent.parent
+                    / "precedent_memory" / "bench" / "extractor_robustness.json")
+
+
+def _load_robustness() -> dict | None:
+    try:
+        d = json.loads(_ROBUSTNESS_PATH.read_text())
+    except (OSError, ValueError):
+        return None
+    return {
+        "false_fast_paths": d.get("false_fast_path"),
+        "total": d.get("n_mutations"),
+        "decoys_resisted": d.get("red_herring_resisted"),
+        "decoys_total": d.get("red_herring_total"),
+        "headline": d.get("headline"),
+    }
+
+
+_ROBUSTNESS = _load_robustness()
 
 # Baseline: MetricNet business-hours MTTR. Labelled honestly on-screen; NOT a
 # measurement of the current live run.
@@ -165,6 +189,29 @@ class DemoState:
             return 0.0
         return max(0.0, (db.utcnow() - start).total_seconds())
 
+    def _ttr_seconds(self, incident_id: str) -> float | None:
+        """Per-incident time-to-resolution, measured from the REAL audit rows: from the
+        `detected` event to the terminal (`verified`/`memory_stored`/`rolled_back`) event.
+        None until the incident has been driven to a terminal state (P1.7 TTR chip)."""
+        rows = self.conn.execute(
+            "SELECT event_type, ts FROM audit_log WHERE payload LIKE ? ORDER BY seq",
+            (f'%"{incident_id}"%',),
+        ).fetchall()
+        detected = next((r["ts"] for r in rows if r["event_type"] == "detected"), None)
+        done = None
+        for r in rows:
+            if r["event_type"] in ("verified", "memory_stored", "rolled_back"):
+                done = r["ts"]
+        d0, d1 = db.parse_iso(detected), db.parse_iso(done)
+        if d0 is None or d1 is None:
+            return None
+        return round(max(0.0, (d1 - d0).total_seconds()), 1)
+
+    def _closed_count(self) -> int:
+        """Cumulative count of fixes Precedent verified-closed this session (P1.7 close strip)."""
+        return self.conn.execute(
+            "SELECT COUNT(*) c FROM audit_log WHERE event_type = 'verified'").fetchone()["c"]
+
     # ------------------------------------------------------------------ #
     # Read surfaces
     # ------------------------------------------------------------------ #
@@ -184,6 +231,7 @@ class DemoState:
                     "ladder_level_label": level_label(level),    # display only
                     "access": "permitted" if allowed else "denied",
                     "denied_owner_team": owner,
+                    "ttr_seconds": self._ttr_seconds(inc["incident_id"]),   # P1.7 TTR chip
                 })
             precedents = self.conn.execute(
                 "SELECT COUNT(*) c FROM memory_record").fetchone()["c"]
@@ -199,6 +247,8 @@ class DemoState:
                 "ladder_top_token": STANDING,
                 "ladder_top_label": LEVEL_LABELS[STANDING],
                 "precedents_count": precedents,
+                "robustness": _ROBUSTNESS,          # P1.7 robustness chip (committed source)
+                "closed_count": self._closed_count(),   # P1.7 cumulative close strip
                 "status": {
                     "memory": "ready",
                     "sync": ("Local Jira-shaped source (offline demo)"

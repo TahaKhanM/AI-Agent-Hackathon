@@ -23,7 +23,7 @@ from console.demo_state import STATE
 from precedent import console_link, orchestrator
 from precedent.contracts import ApprovalDecision, IncidentEvent
 from precedent.tools import SimTools
-from precedent_memory import db
+from precedent_memory import audit, db
 from precedent_memory import sync as syncmod
 
 SIM_URL = os.environ.get("PRECEDENT_SIM_URL", "http://127.0.0.1:8100")
@@ -57,6 +57,22 @@ def _prune_pending() -> None:
         req = getattr(prepared, "approval_request", None)
         if req is None or _expired(req):
             _PENDING.pop(inc_id, None)
+
+
+def _plan_preview(prepared) -> dict:
+    """The diff preview shown on the pending-approval card (P1.7): pre_state vs the planned
+    mutation + the rollback anchor — 'you approve exactly this change, with exactly this undo'."""
+    ref = prepared.ref or {}
+    return {
+        "action": (prepared.rule or {}).get("action_type"),
+        "object_type": ref.get("object_type"),
+        "object_id": ref.get("object_id"),
+        "risk_class": prepared.assessment.risk_class if prepared.assessment else None,
+        "pre_state": prepared.pre_state or {},
+        "planned": [{"tool": s.tool, "args": s.args} for s in prepared.plan.steps],
+        "rollback_ref": prepared.plan.pre_state_snapshot_ref,
+        "plan_hash": prepared.plan.plan_hash,
+    }
 
 
 @app.post("/api/drive/{n}")
@@ -100,7 +116,8 @@ def api_drive(n: int, approve: bool = True, hold: bool = False, flake: bool = Fa
         _PENDING[inc.incident_id] = prepared
         return {"incident": n, "status": "pending_approval",
                 "plan_hash": prepared.approval_request.plan_hash,
-                "expires_at": prepared.approval_request.expires_at}
+                "expires_at": prepared.approval_request.expires_at,
+                "preview": _plan_preview(prepared)}   # P1.7: the diff the human approves
     decision = _auto_approve("ops-lead")(prepared.approval_request) if approve else None
     if decision is not None and flake:           # only arm when an execution WILL consume it
         sim.arm_flake()
@@ -133,6 +150,24 @@ def api_drive_approve(n: int, principal: str = "ops-lead"):
         approval.mark(STATE.conn, inc_id, row["plan_hash"], "approved")
         _PENDING.pop(inc_id, None)
     return _result(n, res)
+
+
+@app.post("/api/drive/{n}/reject")
+def api_drive_reject(n: int, principal: str = "ops-lead"):
+    """Reject a HELD drive (the card's Reject button, P1.7). Marks the gate rejected, drops the
+    in-process pending, and audits the human decision — nothing executes, state left untouched."""
+    inc_id = f"INC-{n}"
+    with STATE._lock:
+        row = approval.lookup_pending(STATE.conn, inc_id)
+        prepared = _PENDING.pop(inc_id, None)
+        if row is None or prepared is None:
+            return {"incident": n, "status": "no_live_approval",
+                    "detail": "expired or absent — nothing to reject"}
+        approval.mark(STATE.conn, inc_id, row["plan_hash"], "rejected")
+        audit.audit("approval_decided", conn=STATE.conn, actor=principal, incident_id=inc_id,
+                    decision="reject", plan_hash=row["plan_hash"], approver=principal)
+        STATE.conn.commit()
+    return {"incident": n, "status": "rejected", "detail": "no change made (fail-closed)"}
 
 
 @app.post("/api/drive/{n}/flake")
