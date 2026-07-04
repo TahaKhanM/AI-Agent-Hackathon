@@ -48,4 +48,9 @@ Confirmed via the Almanac API (`status=active`, endpoints=1) on 2026-07-04:
 - Librarian `agent1qv760pr29kmy9w5lst4tffr06rv6qqmt0ef74w6ycfezd5hfh0e0kse9xv7`
 - Operator `agent1qwesj8x7797jatzt3dwn8gxk2skxsaghrcpa76n548s6a6fz97wvuxna02g`
 
-Still to capture (interactive only): the **ASI:One shared-chat URL** (≥10 discoverability chats).
+**ASI:One shared-chat URL (captured):**
+`https://asi1.ai/invite?channelInviteKey=NmIsH5-DHQVhnf78uThoWX3fVkRXiSpGz78rMsPkoUQ` — a live
+conversation demonstrating the core use case inside ASI:One (no custom frontend): report incident 1 →
+approval card → `approve` → execute + audit hash; incident 2 → zero-LLM Standing-Approval fast-path
+(~15s); incident 3 → fail-closed refusal (owner team only). Ten interactions, five distinct real audit
+hashes, approver bound to the ASI:One sender address.

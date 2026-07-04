@@ -42,6 +42,9 @@ failure, and remembers the outcome as an *executed fix with provenance*.
 ## Demo
 
 - 90-second demo video: [[WAIT:VIDEO-LINK]]
+- Live inside ASI:One (no custom frontend): https://asi1.ai/invite?channelInviteKey=NmIsH5-DHQVhnf78uThoWX3fVkRXiSpGz78rMsPkoUQ
+  — report → deterministic approval gate → execute + audit hash, the zero-LLM standing-approval repeat,
+  and the fail-closed refusal (owner team only).
 - The revocation moment: a runbook's security level flips in Jira → the same memory query goes
   from *allowed* to *denied* in seconds, embedding path included, with both audit logs shown.
 

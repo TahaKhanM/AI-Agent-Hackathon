@@ -27,12 +27,12 @@ badges to that agent's Agentverse profile.
 | Watcher Agentverse profile | `https://agentverse.ai/agents/details/agent1q2m0gk9wdvs0lyc3nfuyeet4y3nc68m9y24kehun2t70hadwf7qxjcgkldx/profile` | **registered · active** (confirmed via Almanac API 2026-07-04) |
 | Librarian Agentverse profile | `https://agentverse.ai/agents/details/agent1qv760pr29kmy9w5lst4tffr06rv6qqmt0ef74w6ycfezd5hfh0e0kse9xv7/profile` | **registered · active** |
 | Operator Agentverse profile | `https://agentverse.ai/agents/details/agent1qwesj8x7797jatzt3dwn8gxk2skxsaghrcpa76n548s6a6fz97wvuxna02g/profile` | **registered · active** |
-| ASI:One shared-chat URL | `ASI_ONE_SHARED_CHAT_URL` (still to capture) | run ≥10 discoverability chats through the Watcher, copy the shared-chat URL |
+| ASI:One shared-chat URL | `https://asi1.ai/invite?channelInviteKey=NmIsH5-DHQVhnf78uThoWX3fVkRXiSpGz78rMsPkoUQ` | **captured** — full loop (approve → standing fast-path → refusal) inside ASI:One, no frontend |
 
-The 3 profile URLs are filled from the confirmed-active registered addresses (verified via the
-Agentverse Almanac API — each returns `status=active`). The **ASI:One shared-chat URL is the one
-remaining slot** — it can only be captured from an interactive ASI:One session (≥10 chats), so it stays
-a slot until then; never a fabricated URL.
+All four Fetch artifacts are now captured: the 3 profile URLs (Almanac-confirmed `status=active`) and
+the ASI:One shared-chat URL of a live conversation demonstrating the core use case inside ASI:One —
+report → approval gate → execute + audit hash, the zero-LLM standing repeat, and the fail-closed refusal.
+Verify the invite link opens for a logged-out viewer before submitting (incognito check).
 
 ## Agent-count honesty rule
 

@@ -12,18 +12,21 @@
   / DoraHacks worksheet; PR-README + final-numbers updated with the UCI numbers; deck PDFs rebuilt.
 - Secrets scrub A–E: gitleaks clean; no API key/token/seed in history.
 
-**⏳ Manual-only (accounts / interactive / web forms — you must do these):**
-1. **ASI:One shared-chat URL** — run ≥10 chats through the Watcher in ASI:One, copy the shared-chat URL.
-2. **Redeem** the Agentverse credit code `UKAIAGENTUKAIAGENTAV`.
-3. **Origin push** — `git push --follow-tags origin main` (publish act; auto-sync handles main, the tag needs this).
-4. **BasedAI fork PR** (Step 6 below) + fill `[[WAIT:MENTOR-ANSWER]]`.
-5. **DoraHacks BUIDL** (Step 7) — event 2272, bounties 1370/1367/1364, organizer questions + T1 sign-off.
-6. **Video capture** (Step 8) + fill `[[WAIT:VIDEO-LINK]]`.
-7. **Practitioner outreach** + the ~22:00 selection-branch call (Step 9).
-8. *(optional)* remove `precedent-scheduling-ops` from the "Rights Ops Only" level for a textbook-clean refusal.
+**✅ Also done since:** ASI:One shared-chat URL captured + filled everywhere
+(`https://asi1.ai/invite?channelInviteKey=NmIsH5-DHQVhnf78uThoWX3fVkRXiSpGz78rMsPkoUQ`); Agentverse
+credit code redeemed; **BasedAI fork PR submitted**; practitioner outreach **not being done** →
+slide-12 validation line stays deleted (never faked).
+
+**⏳ Manual-only remaining (accounts / web forms):**
+1. **Origin push** — `git push --follow-tags origin main` (publish act; auto-sync handles main, the tag needs this).
+2. **DoraHacks BUIDL** (Step 7) — event 2272, bounties 1370/1367/1364; paste me the organizer questions for exact answers + T1 sign-off.
+3. **Video capture** (Step 8) + fill `[[WAIT:VIDEO-LINK]]`.
+4. **BasedAI mentor deadline** — ask the mentor → I fill `[[WAIT:MENTOR-ANSWER]]` (or edit the already-open PR).
+5. **~22:00 selection-branch call** (Step 9).
+6. *(optional)* remove `precedent-scheduling-ops` from the "Rights Ops Only" level for a textbook-clean refusal.
 
 **I can still do for you on request:** fill `[[WAIT:MENTOR-ANSWER]]` / `[[WAIT:VIDEO-LINK]]` once you
-have them; fill `ASI_ONE_SHARED_CHAT_URL` once captured; remove role 10008 from the level.
+have them; remove role 10008 from the level.
 
 ---
 

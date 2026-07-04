@@ -37,7 +37,7 @@ ACL source). No LLM in the permission or risk decision.
 - Watcher: `https://agentverse.ai/agents/details/agent1q2m0gk9wdvs0lyc3nfuyeet4y3nc68m9y24kehun2t70hadwf7qxjcgkldx/profile`
 - Librarian: `https://agentverse.ai/agents/details/agent1qv760pr29kmy9w5lst4tffr06rv6qqmt0ef74w6ycfezd5hfh0e0kse9xv7/profile`
 - Operator: `https://agentverse.ai/agents/details/agent1qwesj8x7797jatzt3dwn8gxk2skxsaghrcpa76n548s6a6fz97wvuxna02g/profile`
-**ASI:One shared chat:** <shared-chat URL — after ≥10-interaction discoverability run>
+**ASI:One shared chat:** `https://asi1.ai/invite?channelInviteKey=NmIsH5-DHQVhnf78uThoWX3fVkRXiSpGz78rMsPkoUQ` (full loop inside ASI:One — "jump to the incident-2 turn" for the ~15s standing-approval run)
 
 **Headline measured numbers (one number, four surfaces — keep identical to deck/README/chip):**
 - Conformance vs BasedAI's rubric: full green-tick table, **FNR 0 leaks / 5,219 deny-expected**,
