@@ -1,5 +1,32 @@
 # Precedent — finish runbook (exact steps to submission)
 
+## STATUS (updated 2026-07-04 — automatable work done)
+
+**✅ Done automatically (evidence: `docs/evidence/LIVE-PROOFS.md`):**
+- Live Jira wiring: MEDIA-2 (kb:KB-0004) + MEDIA-3 (kb:KB-0005) created, security "Rights Ops Only";
+  `JIRA_RUNBOOK_ISSUES` set in `.env`; smoke sees 2 sources.
+- `make live-drift`: TTC 0.24 s median, 0.000% stale-allow.
+- `make bench-uci`: 24,918-record store, FNR 0/7,529, FPR 0/2,471, P99 0.590 µs.
+- Venice live `/models` open-weight guard + FAST chat round-trip.
+- Agentverse: 3 profile URLs captured (registered · active) and filled into deck A7 / FETCH-DELIVERABLES
+  / DoraHacks worksheet; PR-README + final-numbers updated with the UCI numbers; deck PDFs rebuilt.
+- Secrets scrub A–E: gitleaks clean; no API key/token/seed in history.
+
+**⏳ Manual-only (accounts / interactive / web forms — you must do these):**
+1. **ASI:One shared-chat URL** — run ≥10 chats through the Watcher in ASI:One, copy the shared-chat URL.
+2. **Redeem** the Agentverse credit code `UKAIAGENTUKAIAGENTAV`.
+3. **Origin push** — `git push --follow-tags origin main` (publish act; auto-sync handles main, the tag needs this).
+4. **BasedAI fork PR** (Step 6 below) + fill `[[WAIT:MENTOR-ANSWER]]`.
+5. **DoraHacks BUIDL** (Step 7) — event 2272, bounties 1370/1367/1364, organizer questions + T1 sign-off.
+6. **Video capture** (Step 8) + fill `[[WAIT:VIDEO-LINK]]`.
+7. **Practitioner outreach** + the ~22:00 selection-branch call (Step 9).
+8. *(optional)* remove `precedent-scheduling-ops` from the "Rights Ops Only" level for a textbook-clean refusal.
+
+**I can still do for you on request:** fill `[[WAIT:MENTOR-ANSWER]]` / `[[WAIT:VIDEO-LINK]]` once you
+have them; fill `ASI_ONE_SHARED_CHAT_URL` once captured; remove role 10008 from the level.
+
+---
+
 Everything buildable is done + committed (Checkpoint 2). What remains is account-bound. Do these in
 order; each is one action. Commands run from the **main repo root**. Never commit `.env`. Env-var
 names below live in `.env` (values never printed anywhere).
