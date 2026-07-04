@@ -10,31 +10,60 @@ Reproducibility: topology, queries and allow/deny **labels** are a byte-identica
 |---|---|---|---|
 | FNR — leak (oracle DENY, compiler ALLOW) | 0 leaks / 5,219 deny-expected = 0.000% | < 0.1% | ✅ PASS |
 | FPR — outage (oracle ALLOW, compiler DENY) | 0 / 4,781 allow-expected = 0.000% | < 2% | ✅ PASS |
-| P50 latency (permitted() bitmask check) | 0.423 µs | < 50 ms | ✅ PASS |
-| P99 latency (permitted() bitmask check) | 0.445 µs | < 200 ms | ✅ PASS |
-| End-to-end overhead (permission check on hot path, P99) | 0.0130 ms | < 100 ms | ✅ PASS |
+| P50 latency (permitted() bitmask check) | 0.420 µs | < 50 ms | ✅ PASS |
+| P99 latency (permitted() bitmask check) | 0.583 µs | < 200 ms | ✅ PASS |
+| End-to-end overhead (permission check on hot path, P99) | 0.0190 ms | < 100 ms | ✅ PASS |
 | Derived-memory correctness (vs oracle) | 3,000/3,000 probes over 1,000 lineage artifacts = 100.00% | > 99% | ✅ PASS |
-| ACL drift (stale-allow after one sync tick) | 0/200 = 0.000% (synthetic — window confirmed real: 100.000% stale-allow pre-sync; live windowed drift Saturday) | < 0.5% | ✅ PASS |
-| Time-to-consistency (flip → recompiled deny) | 0.0180 ms median (synthetic recompile propagation; live poll-anchored TTC Saturday) | < 5 min | ✅ PASS |
+| ACL drift (stale-allow after one sync tick) | 0/200 = 0.000% (synthetic — window confirmed real: 100.000% stale-allow pre-sync; live 3-flip drift measured 2026-07-04, see below) | < 0.5% | ✅ PASS |
+| Time-to-consistency (flip → recompiled deny) | 0.0193 ms median (synthetic recompile propagation; live poll-anchored TTC 0.24 s measured 2026-07-04, see below) | < 5 min | ✅ PASS |
 | Audit coverage (every allow/deny/sync/exec path) | 300/300 decisions audited = 100.0%; hash chain verified (rigorous check + dropped-call meta-test: tests/test_audit_coverage.py) | 100% | ✅ PASS |
 | Permission-check curve O(1)/O(log n) (1k/5k/25k/100k) | flat — see curve table below | flat / log | ✅ PASS |
 | Adversarial attacks | 6/6 pass (tests/test_adversarial.py) | 6/6 | ✅ PASS |
 
 **Overall: ALL PASS ✅** (11/11 rows green).
 
-### Realism run (UCI 25k-record store)
+### Realism run (UCI 25k-record store) — live-measured 2026-07-04
+
+Live against the real UCI #498 corpus (`make bench-uci`, CC BY 4.0). Caption **"25k-record
+store"** (24,918 incidents, 70 real `assignment_group` ACL boundaries) — **never "141k events"**
+(141,712 is the raw event count; the permission-check P99 is over the record store).
 
 | Metric | Measured | Threshold | Pass/Fail |
 |---|---|---|---|
-| P99 latency over the 25k-record store | not yet measured — realism run lands Saturday (25k-record store, never "141k events") | < 200 ms | — |
+| FNR — leak, over the 25k-record store | 0 / 7,529 deny-expected = 0.000% | < 0.1% | ✅ PASS |
+| FPR — outage, over the 25k-record store | 0 / 2,471 allow-expected = 0.000% | < 2% | ✅ PASS |
+| P99 latency (permitted()) over the 25k-record store | 0.590 µs | < 200 ms | ✅ PASS |
+
+### Live ACL drift / time-to-consistency — 3-flip, 2-issue Jira liveness proof (2026-07-04)
+
+Real Jira issue-security flips (`make live-drift`) — a **liveness proof of the path**, a 3-flip
+run over 2 restricted runbook issues (MEDIA-2 / MEDIA-3), **not** a "25k-store" figure.
+
+| Metric | Measured | Threshold | Pass/Fail |
+|---|---|---|---|
+| Time-to-consistency (flip → deny), live | 0.24 s median | < 5 min | ✅ PASS |
+| ACL drift (stale-allow fraction), live | 0.000% | < 0.5% | ✅ PASS |
 
 ### Permission-check latency vs store size (O(1)/O(log n) curve)
 
 | Store size (records) | P50 permitted() | P99 permitted() | P50 check_access | P99 check_access |
 |---|---|---|---|---|
-| 1,000 | 0.417 µs | 0.440 µs | 0.0092 ms | 0.0109 ms |
-| 5,000 | 0.415 µs | 0.462 µs | 0.0093 ms | 0.0109 ms |
-| 25,000 | 0.420 µs | 0.438 µs | 0.0096 ms | 0.0113 ms |
-| 100,000 | 0.422 µs | 0.488 µs | 0.0103 ms | 0.0123 ms |
+| 1,000 | 0.442 µs | 0.565 µs | 0.0103 ms | 0.0158 ms |
+| 5,000 | 0.442 µs | 0.570 µs | 0.0105 ms | 0.0144 ms |
+| 25,000 | 0.445 µs | 0.567 µs | 0.0111 ms | 0.0163 ms |
+| 100,000 | 0.453 µs | 0.572 µs | 0.0122 ms | 0.0172 ms |
 
 _The per-check latency is flat across a 100× range in store size — the permission check is O(1): a single bitmask AND over an indexed effective_policy row, independent of how much memory the store holds._
+
+## Additional (P1.9) — query-time inference prevention (deterministic, zero-LLM)
+
+Complements the frozen 10-metric bench (results.json unchanged). Two mechanisms:
+
+| Mechanism | Result |
+|---|---|
+| Denial-burst / probing detection (8 denials, threshold 5) | **flagged + throttled + audited** (✅) |
+| Cross-boundary bundle (disjoint restricted boundaries) | **denied + audited** (✅) |
+| Same-boundary bundle | allowed (✅) |
+| Public record co-occurrence | allowed (✅) |
+
+Overall: **PASS**. Both fail toward non-action (flag/deny), never disclosure; every decision is written to the hash-chained audit log. `precedent_memory/retrieve.py` stays LLM-import-free.

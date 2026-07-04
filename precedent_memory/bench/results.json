@@ -57,13 +57,13 @@
     "fnr_rate": 0.0,
     "fpr_outages": 0,
     "fpr_rate": 0.0,
-    "mean_permitted_ms": 0.000285890384,
+    "mean_permitted_ms": 0.0003062577,
     "n_queries": 10000,
-    "overhead_p99_ms": 0.013000410000000009,
-    "p50_check_ms": 0.010416,
-    "p50_permitted_ms": 0.00042332,
-    "p99_check_ms": 0.013000410000000009,
-    "p99_permitted_ms": 0.000445
+    "overhead_p99_ms": 0.019042260000000026,
+    "p50_check_ms": 0.011667,
+    "p50_permitted_ms": 0.00042,
+    "p99_check_ms": 0.019042260000000026,
+    "p99_permitted_ms": 0.00058332
   },
   "derived_memory": {
     "agree": 3000,
@@ -77,37 +77,37 @@
     "drift_before": 1.0,
     "m_flips": 200,
     "oracle_denied_immediately": 200,
-    "ttc_median_ms": 0.017959,
-    "ttc_p99_ms": 0.02089874999999998
+    "ttc_median_ms": 0.019292,
+    "ttc_p99_ms": 0.02846924999999999
   },
   "latency_curve": [
     {
       "n_records": 1000,
-      "p50_check_ms": 0.009208,
-      "p50_permitted_ms": 0.00041663999999999997,
-      "p99_check_ms": 0.010875,
-      "p99_permitted_ms": 0.0004400168
+      "p50_check_ms": 0.010292,
+      "p50_permitted_ms": 0.00044168,
+      "p99_check_ms": 0.0158355,
+      "p99_permitted_ms": 0.0005650168
     },
     {
       "n_records": 5000,
-      "p50_check_ms": 0.009292,
-      "p50_permitted_ms": 0.000415,
-      "p99_check_ms": 0.010917,
-      "p99_permitted_ms": 0.00046165679999999996
+      "p50_check_ms": 0.010541,
+      "p50_permitted_ms": 0.00044168,
+      "p99_check_ms": 0.014419919999999996,
+      "p99_permitted_ms": 0.0005700163999999999
     },
     {
       "n_records": 25000,
-      "p50_check_ms": 0.009625,
-      "p50_permitted_ms": 0.00042,
-      "p99_check_ms": 0.01133301,
-      "p99_permitted_ms": 0.00043832
+      "p50_check_ms": 0.011125,
+      "p50_permitted_ms": 0.000445,
+      "p99_check_ms": 0.01633384,
+      "p99_permitted_ms": 0.0005666967999999999
     },
     {
       "n_records": 100000,
-      "p50_check_ms": 0.010291,
-      "p50_permitted_ms": 0.00042168,
-      "p99_check_ms": 0.01225,
-      "p99_permitted_ms": 0.0004884096
+      "p50_check_ms": 0.012167,
+      "p50_permitted_ms": 0.00045336000000000004,
+      "p99_check_ms": 0.017173929999999994,
+      "p99_permitted_ms": 0.0005717131999999999
     }
   ],
   "seed": 4207

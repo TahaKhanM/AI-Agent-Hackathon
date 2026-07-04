@@ -91,8 +91,8 @@ Protocol topology: 5 hierarchy levels · 20 roles · 1,000 ACL-tagged docs · 40
 | P99 latency (permitted() bitmask check) | 0.445 µs | < 200 ms | ✅ |
 | End-to-end overhead (permission check on hot path, P99) | 0.0130 ms | < 100 ms | ✅ |
 | Derived-memory correctness (1k lineage artifacts vs oracle) | 3,000/3,000 probes = 100.00% | > 99% | ✅ |
-| ACL drift (stale-allow after one sync tick) | 0/200 = 0.000% (synthetic; live Saturday) | < 0.5% | ✅ |
-| Time-to-consistency (flip → recompiled deny) | 0.0180 ms median (synthetic; live Saturday) | < 5 min | ✅ |
+| ACL drift (stale-allow after one sync tick) | 0/200 = 0.000% (synthetic; live 3-flip = 0.000% stale-allow, measured) | < 0.5% | ✅ |
+| Time-to-consistency (flip → recompiled deny) | 0.0180 ms median synthetic; live poll-anchored TTC **0.24 s** measured | < 5 min | ✅ |
 | Audit coverage (every allow/deny/sync/exec path) | 300/300 = 100.0% + hash chain verified | 100% | ✅ |
 | Permission-check curve (1k/5k/25k/100k records) | flat / O(1) | flat/log | ✅ |
 | Adversarial attacks | **6/6** | 6/6 | ✅ |
@@ -115,6 +115,24 @@ deny-expected · FPR 0 / 2,471 allow-expected · P99 permitted() 0.590 µs over 
 (never "P99 over 141k events" — 141,712 is the raw event count). Live Jira dual-enforcement is wired
 (2 restricted runbook issues, security "Rights Ops Only") and a 3-flip `make live-drift` measured
 TTC 0.24 s / 0.000% stale-allow. Evidence: `docs/evidence/LIVE-PROOFS.md`.
+
+**Temporal-embargo constraint (implemented, oracle-graded).** A record published with a future
+`unlock_at` is withheld from *everyone* until then — even a fully-cleared principal and even a
+public record (an embargo narrows, never widens; fail-closed on an unparseable timestamp). No
+schema change (reads the record body); oracle-graded deny-before / allow-after in
+`precedent_memory/tests/test_temporal_embargo.py`; the conformance correctness is byte-identical
+(embargo is a no-op on the bench records).
+
+**Query-time inference prevention (implemented, deterministic, zero-LLM).** Beyond the six attacks
+above, `precedent_memory/probing_detection.py` adds two mechanisms, oracle-graded and audited: (1)
+a per-principal **denial-burst / probing-pattern detector** over the hash-chained audit_log
+(sliding window; threshold+ denials → flag + throttle + audit); (2) a bundle-level
+**cross-boundary co-occurrence check** before context assembly — a result set may not mix records
+whose effective policies imply disjoint restricted boundaries (deny the bundle + audit), even for
+a principal cleared for both. Both fail toward non-action, never disclosure. Additional labelled
+bench section (`python -m precedent_memory.bench.inference_prevention` →
+`inference_prevention.json`; the 10-metric results.json is unchanged). Tests:
+`precedent_memory/tests/test_probing_detection.py`.
 
 ## Tech & sponsor APIs used
 
@@ -143,10 +161,11 @@ Deadline governing this submission (per BasedAI mentor): [[WAIT:MENTOR-ANSWER]].
 
 ## What's next
 
-- The live UCI 25k-record realism run and the live Jira drift/TTC numbers (poll-anchored to Jira's
-  audit clock), posted as a PR comment.
-- Governed redacted derivatives (C-lineage) with attestation; temporal-embargo constraints.
+- Governed redacted derivatives (C-lineage) with attestation (schema + happy-path designed, UI
+  not built — the honest stub boundary).
 - The hosted degraded-L0 Watcher kept running post-hackathon on Agentverse.
+- Poll-anchoring the live drift/TTC to Jira's own auditing API for a regulator-grade external
+  clock (the client-measured 0.24 s TTC is already well inside the < 5 min bar).
 
 ## License
 
