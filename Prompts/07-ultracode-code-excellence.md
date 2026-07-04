@@ -6,7 +6,8 @@
 > - This prompt was authored 4 Jul 2026 from a four-agent critical analysis (Conduct core-loop, Fetch rails, BasedAI memory, video plan) run against the Checkpoint 2 tree. The findings below carry file:line references from that analysis — the session must **re-verify every finding in the code before acting on it** (an analysis pass can be wrong; the code is the truth).
 > - `.env` populated per `CREDENTIALS-CHECKLIST.md`, never committed. Airplane-first: everything builds and tests offline; no live calls except where an item explicitly says so.
 > - **Auto-sync caveat (verified):** an external git auto-sync pushes local `main` commits to the public origin without an explicit push. Work in **worktrees on side branches**; merge a lane to `main` only when its full gate set is green — merging IS publishing.
-> - **Timing:** DoraHacks locks 4 Jul 22:59 UTC; the demo video (Prompts/08) captures against this tree. P0 and P1.7 should land before video capture so the console improvements appear on screen. If the clock bites, obey the cut order in §CUT ORDER — a smaller green tree always beats a larger red one.
+> - **Timing:** DoraHacks locks 4 Jul 22:59 UTC; the demo video (Prompts/08) captures against this tree. P0 and P1.7 should land as early as possible so the console improvements appear on screen. If the clock bites, obey the cut order in §CUT ORDER — a smaller green tree always beats a larger red one.
+> - **Parallel-safe:** this prompt may run **concurrently with Prompts/08** (video production) in a separate session. The body's §PARALLEL-RUN PROTOCOL defines the file-ownership, port, and commit-marker contract that makes that safe — both sessions must honour it.
 > - The BasedAI fork PR is **already open** — improvements that change submitted claims must be reflected there by the human (the session prepares the exact comment/diff text; the human posts it).
 
 ---
@@ -33,6 +34,15 @@ Work in git worktrees on side branches; merge to `main` lane-by-lane only when g
    - `make check-open-weight` → clean; `make test` → **180 passed, 0 skipped**; `make bench` → 6/6 attacks, FNR 0/5,219, correctness byte-identical to committed `results.json` (restore after); `make bench-extractor` → 0/100 false-fast-paths, byte-identical replay; `make secrets-scan` → clean; `.venv/bin/ruff check .` → clean; `make freeze-check` → exit 0.
    - Boot the demo (`make demo-reset`, `make sim`) and drive `POST /api/drive/1|2|3` → resolved / resolved(fast) / refused, leak probe 0.
 4. **Frozen invariants (do not relitigate):** seed **4207** and everything that makes the demo replay byte-identically (`sim/incidents.py`, loaders, the mutation corpus); the committed bench artifacts (`results.json`, `extractor_robustness.json`) stay byte-identical — the ONE deliberate exception is item P1.10; contracts/schema/model-registry are **additive-only**; the three registered agent addresses and their env seeds are untouchable (handler changes are fine — the address is seed-derived).
+
+---
+
+## PARALLEL-RUN PROTOCOL (a Prompts/08 video session may be running concurrently — honour this even if you can't see it)
+
+- **File ownership (hard boundary):** YOU own `precedent/`, `precedent_memory/`, `agents/`, `console/`, `sim/`, `scripts/`, `tests/`, `Makefile`, `Prep/submissions/`, `docs/` (except `docs/evidence/` lines the video session appends). You NEVER write `Prep/video/**` or anything under `precedent-video-drop/` — those belong to the 08 session. If an item seems to require editing a video-owned file (e.g. a caption number changed by P1.10), write the needed change into your final report as a handoff note instead.
+- **Runtime namespacing:** you use the DEFAULT ports and DBs (`:8000`/`:8100`, `data/precedent.db`, default sim DB). The 08 session is instructed to run its own stack on `PRECEDENT_CONSOLE_PORT=8200` / `PRECEDENT_SIM_PORT=8300` with its own scratch DB copies — never reset or write its DBs, never bind its ports.
+- **Commit markers (the sync signal):** the merge commit that lands P1.7 MUST have a subject starting `P1.7:`, and P1.10's `P1.10:` — the 08 session polls `git log` for these to trigger its re-capture and its end-card P99 re-check. Announce both in your running commentary too.
+- **Git discipline:** before every merge to `main`, `git pull --rebase` (the 08 session also commits plan files to `main`); if the rebase brought in changes, re-run the GUARDIAN gate set before pushing the merge. Ownership makes content conflicts impossible; the rebase handles ordering.
 
 ---
 
@@ -142,7 +152,7 @@ Done when: every P0 item is fixed with its failing-test-first proof and evaluato
 
 ## CLOSING HUMAN WALKTHROUGH (the session prepares these; only you can do them)
 
-1. **Video capture (Prompts/08 session)** runs against THIS improved tree — start it only after P1.7 merges.
+1. **Video capture (Prompts/08 session)** — may already be running in parallel; it polls for your `P1.7:` merge marker and re-captures automatically. If it isn't running yet, start it any time (it does not need to wait for you).
 2. **Post the prepared PR comment** (updated bench table + inference-prevention section) on the open BasedAI fork PR.
 3. **DoraHacks BUIDL** — submit before 22:59 UTC with T1 sign-off; the improved robustness/console story is already reflected in the worksheet drafts the session updates.
 4. **`git push --follow-tags origin main`** when you choose to publish the tag (auto-sync covers commits, not tags).
