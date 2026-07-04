@@ -4,15 +4,22 @@ Everything automatable is **built and gate-passed** from the frozen seed-4207 bu
 every remaining **human** act with its file/URL. Nothing here needs the machine — it's login-bound,
 upload-bound, or a stranger's eyes.
 
+> **To redo the whole thing to a professional standard by hand,** follow
+> **[`HUMAN-PRODUCTION-GUIDE.md`](HUMAN-PRODUCTION-GUIDE.md)** — script, logins, demo setup, per-shot
+> directions, assembly, QA, upload. This ship kit is the short handoff; that guide is the full manual.
+
 ## What's done (in `precedent-video-drop/`, gitignored — no media in git)
 
 | Export | File | Duration | Status |
 |---|---|---|---|
-| Master | `exports/precedent-full-v1.mp4` | ~4:24 | assembled, gate-passed; **shot-5 = placeholder** |
-| 90-second cut | `exports/precedent-90s-v1.mp4` | ~1:31 | assembled, both memorable lines |
-| 30-second teaser | `exports/precedent-30s-v1.mp4` | 0:30 | assembled, captioned |
+| Master | `exports/precedent-full-v2.mp4` | ~4:30 | assembled, gate-passed; **shot 5 = real ASI:One conversation** |
+| 90-second cut | `exports/precedent-90s-v2.mp4` | ~1:31 | assembled, both memorable lines |
+| 30-second teaser | `exports/precedent-30s-v2.mp4` | 0:30 | assembled, captioned |
 
-All 1920×1080 / 30fps / AAC, −14.5…−15.0 LUFS (TP ≤ −1). One `edit-manifest.json` drives all three.
+All 1920×1080 / 30fps / AAC, −14.5…−14.8 LUFS (TP ≤ −1). VO is **ElevenLabs (George, British, calm)**.
+Shot 5 renders the **real captured `precedent-watcher` conversation** (real audit hashes, chat-sender
+approver, ~15s zero-LLM run) — the agent is **confirmed live on ASI:One**. One `edit-manifest.json`
+drives all three.
 Re-assemble any time: `source precedent-video-drop/scratch/env.sh && .venv/bin/python Prep/video/pipeline/assemble.py all <version>`.
 
 ## Human act 1 — the ASI:One take (the only capture a machine can't do)
