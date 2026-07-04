@@ -24,12 +24,38 @@ from uagents import Bureau
 
 from agents.librarian import build_librarian
 from agents.operator import build_operator
+from agents.protocol import TriageMsg
+from agents.rails import shadow_hops
 from agents.watcher import build_watcher
 
+# A read-only self-check message: the scheduler class incident-2 retrieval (a TriageMsg carries
+# no mutation), so the startup wire-check never changes sim/memory state.
+_SELF_CHECK_TRIAGE = TriageMsg(
+    incident_id="INC-2", class_key="scheduler|SCH-DUP-002|schedule_item",
+    extraction_method="deterministic", principal="scheduling-ops")
 
-def build_bureau() -> tuple[Bureau, dict[str, str]]:
+
+def _attach_rails_self_check(watcher, addresses: dict[str, str]) -> None:
+    """P1.8: at Bureau startup, push ONE real message through the Librarian rail and log the
+    per-hop ms — the concrete 'multi-agent is true on the wire' evidence. Read-only (a TriageMsg
+    retrieval) so it mutates nothing, and sent FROM the Watcher's identity so it satisfies the
+    P0.3 rails allowlist. Fail-tolerant: if peers are still registering, it logs and moves on."""
+    @watcher.on_event("startup")
+    async def _rails_self_check(ctx) -> None:   # noqa: ANN001 — uAgents Context
+        hops = await shadow_hops(ctx, librarian_address=addresses["librarian"],
+                                 operator_address=addresses["operator"],
+                                 triage_msg=_SELF_CHECK_TRIAGE)
+        if hops:
+            trail = ", ".join(f"{h['agent']} {h['ms']}ms" for h in hops)
+            ctx.logger.info(f"[rails self-check] real Watcher->Librarian round-trip: {trail}")
+        else:
+            ctx.logger.info("[rails self-check] no rail reply yet (peers still registering)")
+
+
+def build_bureau(self_check: bool = True) -> tuple[Bureau, dict[str, str]]:
     """Construct the three agents and a Bureau hosting them. Returns the Bureau and a
-    {name: address} map (addresses are stable, derived from the env seeds)."""
+    {name: address} map (addresses are stable, derived from the env seeds). With self_check=True
+    the Watcher runs the P1.8 startup rails self-check."""
     watcher = build_watcher()
     librarian = build_librarian()
     operator = build_operator()
@@ -44,6 +70,8 @@ def build_bureau() -> tuple[Bureau, dict[str, str]]:
         "librarian": librarian.address,
         "operator": operator.address,
     }
+    if self_check:
+        _attach_rails_self_check(watcher, addresses)
     return bureau, addresses
 
 
