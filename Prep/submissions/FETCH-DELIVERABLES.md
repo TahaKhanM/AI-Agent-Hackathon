@@ -22,15 +22,17 @@ badges to that agent's Agentverse profile.
 
 ## The three account-bound artifacts to capture (fill after registration)
 
-| Artifact | Slot | Fill from |
+| Artifact | URL | Status |
 |---|---|---|
-| Watcher Agentverse profile URL | `[[WAIT:FETCH-URLS]]` | live registration (`python -m agents.watcher` with the env seed + `AGENTVERSE_API_KEY`) |
-| Librarian Agentverse profile URL | `[[WAIT:FETCH-URLS]]` | live registration |
-| Operator Agentverse profile URL | `[[WAIT:FETCH-URLS]]` | live registration |
-| ASI:One shared-chat URL | `ASI_ONE_SHARED_CHAT_URL` | after ≥10-interaction discoverability run through the B1-wired Watcher |
+| Watcher Agentverse profile | `https://agentverse.ai/agents/details/agent1q2m0gk9wdvs0lyc3nfuyeet4y3nc68m9y24kehun2t70hadwf7qxjcgkldx/profile` | **registered · active** (confirmed via Almanac API 2026-07-04) |
+| Librarian Agentverse profile | `https://agentverse.ai/agents/details/agent1qv760pr29kmy9w5lst4tffr06rv6qqmt0ef74w6ycfezd5hfh0e0kse9xv7/profile` | **registered · active** |
+| Operator Agentverse profile | `https://agentverse.ai/agents/details/agent1qwesj8x7797jatzt3dwn8gxk2skxsaghrcpa76n548s6a6fz97wvuxna02g/profile` | **registered · active** |
+| ASI:One shared-chat URL | `ASI_ONE_SHARED_CHAT_URL` (still to capture) | run ≥10 discoverability chats through the Watcher, copy the shared-chat URL |
 
-These four URLs feed deck appendix A7, the BUIDL "Agentverse profiles" + "ASI:One shared chat" fields,
-and the PR-README demo section. Until captured they stay `[[WAIT:FETCH-URLS]]` — never a fabricated URL.
+The 3 profile URLs are filled from the confirmed-active registered addresses (verified via the
+Agentverse Almanac API — each returns `status=active`). The **ASI:One shared-chat URL is the one
+remaining slot** — it can only be captured from an interactive ASI:One session (≥10 chats), so it stays
+a slot until then; never a fabricated URL.
 
 ## Agent-count honesty rule
 

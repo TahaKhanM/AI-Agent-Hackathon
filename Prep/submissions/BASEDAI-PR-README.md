@@ -106,8 +106,12 @@ produced a *wrong confident* class that could fast-path a wrong fix — and **25
 decoys resisted** (an unknown code degrades to human review rather than grabbing a look-alike
 known code). Source of truth: `precedent_memory/bench/extractor_robustness.json`.
 
-Realism run: the same harness over the UCI ~**25k-record store** (dataset #498, ACL boundaries
-from real `assignment_group` fields) — measured live Saturday and posted as a PR comment.
+Realism run (measured, `make bench-uci`): the same harness over the UCI **25k-record store**
+(dataset #498, **24,918 incidents**, 70 real `assignment_group` ACL boundaries) — **FNR 0 / 7,529
+deny-expected · FPR 0 / 2,471 allow-expected · P99 permitted() 0.590 µs over the 25k-record store**
+(never "P99 over 141k events" — 141,712 is the raw event count). Live Jira dual-enforcement is wired
+(2 restricted runbook issues, security "Rights Ops Only") and a 3-flip `make live-drift` measured
+TTC 0.24 s / 0.000% stale-allow. Evidence: `docs/evidence/LIVE-PROOFS.md`.
 
 ## Tech & sponsor APIs used
 

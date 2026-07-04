@@ -33,7 +33,10 @@ ACL source). No LLM in the permission or risk decision.
 **Repo:** <public repo URL — fill after the repo-public flip>
 **BasedAI PR:** <PR URL>
 **Demo video:** <unlisted video URL — Saturday>
-**Agentverse profiles:** Watcher / Librarian / Operator <3 URLs — after registration>
+**Agentverse profiles (registered · active):**
+- Watcher: `https://agentverse.ai/agents/details/agent1q2m0gk9wdvs0lyc3nfuyeet4y3nc68m9y24kehun2t70hadwf7qxjcgkldx/profile`
+- Librarian: `https://agentverse.ai/agents/details/agent1qv760pr29kmy9w5lst4tffr06rv6qqmt0ef74w6ycfezd5hfh0e0kse9xv7/profile`
+- Operator: `https://agentverse.ai/agents/details/agent1qwesj8x7797jatzt3dwn8gxk2skxsaghrcpa76n548s6a6fz97wvuxna02g/profile`
 **ASI:One shared chat:** <shared-chat URL — after ≥10-interaction discoverability run>
 
 **Headline measured numbers (one number, four surfaces — keep identical to deck/README/chip):**

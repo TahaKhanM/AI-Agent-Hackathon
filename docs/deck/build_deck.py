@@ -449,8 +449,11 @@ def build(with_band, with_monday):
           "→ “approve” → the ticket transitions and closes → audit hash returned.", 15, BODY, False)],
         [("Approval principal = the Chat Protocol sender address, logged as the authorising identity, with a "
           "10-minute gate TTL (a dropped session never leaks an execution).", 15, BODY, False)],
-        [("Agentverse profile URLs + the ASI:One shared-chat URL are captured at live registration.", 14, GREY, False)],
-    ], space=14)
+        [("Registered · active on Agentverse (Almanac-confirmed): Watcher agent1q2m0gk9…jcgkldx · "
+          "Librarian agent1qv760pr2…kse9xv7 · Operator agent1qwesj8x7…uxna02g.", 13, ACCENT, False)],
+        [("Full profile URLs + the ASI:One shared-chat URL are listed in the submission (Fetch deliverables).",
+          13, GREY, False)],
+    ], space=12)
 
     # A9 (before A8) — Bottoms-up ACV
     s = _blank(p); appendix_title(s, "A9 — Bottoms-up ACV")

@@ -59,3 +59,4 @@ data/precedent.db-*
 data/cache/
 *.sqlite
 *.sqlite-*
+data/raw/incident_event_log.csv

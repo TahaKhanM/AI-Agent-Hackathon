@@ -78,6 +78,20 @@ The ONE robustness number, identical on all four surfaces (console chip · deck 
 - Breakdown: correct-match 8 · safe-degrade 50 · conservative-degrade 42 · false-fast-path 0. Recoverable
   known-code tickets: 8/8 correct. (Corpus is adversarial by design: 92% codeless/garbled/unknown-sibling.)
 
+## 4b. Live-measured against the real accounts (2026-07-04 — `docs/evidence/LIVE-PROOFS.md`)
+
+Real round-trips, not synthetic — complements the airplane-mode bench:
+
+- **UCI 25k realism** (`make bench-uci`, dataset #498): **24,918-record store** (70 real
+  `assignment_group` boundaries) · **FNR 0 / 7,529** · **FPR 0 / 2,471** · **P99 permitted() 0.590 µs**
+  over the 25k-record store. (Never "P99 over 141k events".)
+- **Venice**: live `/models` open-weight guard PASS (4 pinned ids → huggingface.co sources) + a live
+  FAST chat round-trip.
+- **Live Jira dual-enforcement**: 2 restricted runbook issues (MEDIA-2/MEDIA-3, "Rights Ops Only"),
+  smoke sees 2 sources; **`make live-drift` (3 flips): TTC 0.24 s median, 0.000% stale-allow** — a
+  liveness proof of the path (3-flip, 2-issue Jira), **not** a "25k-store" figure.
+- **Agentverse**: 3 agents registered · active (Almanac-confirmed).
+
 ## 5. Market / industry citations (from `Research/00-verified-claims.md` — respect the vote + caveat)
 
 | Claim | Value | Label |
