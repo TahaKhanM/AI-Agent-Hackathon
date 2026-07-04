@@ -17,7 +17,6 @@ GREY = RGBColor(0x8A, 0x8F, 0x98)
 DIM = RGBColor(0xB8, 0xBE, 0xC6)
 FONT = "Arial"        # Inter is unavailable to soffice; Arial is the safe fallback
 SW, SH = Inches(13.333), Inches(7.5)
-SEAL = "assets/brand/precedent-seal-dark.png"   # navy wax seal + cream column — reads on the dark deck
 
 
 def new_deck():
@@ -73,15 +72,13 @@ def notes(s, text):
 def build(with_band, with_monday):
     p = new_deck()
 
-    # ---- Slide 1 — Title (seal mark + wordmark) ----
+    # ---- Slide 1 — Title ----
     s = _blank(p)
-    pic = s.shapes.add_picture(SEAL, 0, Inches(0.55), height=Inches(2.75))
-    pic.left = int((SW - pic.width) / 2)                       # centre the seal
-    tb(s, Inches(1), Inches(3.5), Inches(11.3), Inches(1.9), [
-        [("Precedent", 66, BODY, True)],
-        [("Every incident resolved becomes precedent.", 24, ACCENT, False)],
+    tb(s, Inches(1), Inches(2.4), Inches(11.3), Inches(2.2), [
+        [("Precedent", 80, BODY, True)],
+        [("Every incident resolved becomes precedent.", 26, ACCENT, False)],
     ], align=PP_ALIGN.CENTER)
-    tb(s, Inches(1), Inches(6.55), Inches(11.3), Inches(0.6), [[
+    tb(s, Inches(1), Inches(6.2), Inches(11.3), Inches(0.6), [[
         ("Team — UK AI Agent Hackathon EP5  ·  Conduct “Make Legacy Move”  ·  Fetch.ai  ·  BasedAI",
          13, GREY, False)]], align=PP_ALIGN.CENTER)
     notes(s, "Say nothing on this slide — go straight into the cold open as slide 2 appears. "

@@ -1,8 +1,5 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/precedent-seal-dark.png">
-    <img src="assets/brand/precedent-logo.png" alt="Precedent" width="240">
-  </picture>
+  <img src="assets/brand/precedent-logo.png" alt="Precedent" width="240">
 </p>
 
 # Precedent

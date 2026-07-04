@@ -18,18 +18,16 @@ authorising seal), with the **PRECEDENT** serif wordmark. "Every incident resolv
 | `precedent-logo-colored.svg` / `.pdf` | **Primary** full logo (seal + column + wordmark) on the cream card — light surfaces, print, slides on paper. |
 | `precedent-logo-transparent.svg` / `.pdf` | Full logo, transparent background — for placing on **light** backgrounds. |
 | `precedent-logo.png` | 640px raster of the colored logo — README / web. |
-| `precedent-seal-dark.png` | **Seal mark only, transparent background, cream column** — for **dark** surfaces (the deck `#0B0F14`, avatars on dark). Pair with a light wordmark. |
 | `precedent-avatar.png` | 1024² square (seal on cream) — Agentverse / social agent avatar. |
 
 ## Usage
 
-- **Dark backgrounds** (deck, dark UI): use `precedent-seal-dark.png` (the cream column reads on dark);
-  set the wordmark in cream/off-white beside or below it.
-- **Light backgrounds** (README, print): use `precedent-logo-colored` (self-contained cream card) or
-  `precedent-logo-transparent` on a light surface.
-- Don't stretch, rotate, recolor the seal, or set the navy wordmark on a dark background (it disappears —
-  use the dark seal mark + a light wordmark instead).
+- **Light / neutral backgrounds** (README, print, avatars): use `precedent-logo-colored` (the
+  self-contained cream card) or `precedent-logo-transparent` on a light surface.
+- The dark deck stays wordmark-only (a cream logo card reads as a sticker on `#0B0F14`); keep the
+  logo to light surfaces.
+- Don't stretch, rotate, or recolor the seal, and don't set the navy wordmark on a dark background
+  (it disappears).
 
-_Vector SVG/PDF are the masters; the PNGs are derived. Regenerate the dark seal + avatar with the
-Pillow snippet in the commit that introduced them (crop the wordmark, flood-fill the cream border to
-transparent, keep the enclosed cream column)._
+_Vector SVG/PDF are the masters; the PNGs are derived (`precedent-logo` and the square `precedent-avatar`
+are downscales of the colored master)._
