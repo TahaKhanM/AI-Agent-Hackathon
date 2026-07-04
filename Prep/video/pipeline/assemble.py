@@ -116,6 +116,15 @@ def build_segment(shot: dict) -> Path:
         concat_list.write_text("".join(f"file '{p}'\n" for p in parts))
         run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0",
              "-i", str(concat_list), "-c", "copy", str(base)])
+    elif kind == "pan":
+        # slow vertical pan over a tall still (e.g. the ASI:One conversation) across the whole slot.
+        still = resolve_still(shot["src"])
+        ch = shot.get("card_height", H)
+        ymax = max(0, ch - H)
+        yexpr = f"min({ymax}*t/{slot},{ymax})" if ymax > 0 else "0"
+        run(["ffmpeg", "-y", "-loglevel", "error", "-loop", "1", "-i", str(still), "-t", str(slot),
+             "-vf", f"scale={W}:{ch}:flags=lanczos,crop={W}:{H}:0:'{yexpr}',format=yuv420p",
+             "-r", str(FPS), "-c:v", "libx264", "-preset", "medium", "-crf", "18", str(base)])
     elif kind == "seq":
         parts = []
         for j, s in enumerate(shot["seq"]):
