@@ -1,0 +1,30 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+:root{--ink:#0B0F14;--panel:#141b29;--line:#243149;--cream:#F1F1E2;--accent:#6E8FD6;--muted:#9aa0ad;--ok:#7fe3b0}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1920px;height:1080px;background:var(--ink);overflow:hidden}
+.stage{width:1920px;height:1080px;padding:100px 150px;color:var(--cream);font-family:"Helvetica Neue",Arial,sans-serif;
+  background:radial-gradient(1100px 700px at 30% 12%,rgba(60,59,98,.35),transparent 60%),var(--ink);
+  display:flex;flex-direction:column}
+.kicker{font-size:28px;letter-spacing:.4em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.h{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:74px;margin-top:18px;line-height:1.08}
+.badge{display:inline-block;margin-top:26px;font-size:22px;color:var(--ok);border:1px solid var(--line);
+  background:rgba(127,227,176,.08);border-radius:20px;padding:8px 20px}
+.beats{margin-top:42px;display:flex;flex-direction:column;gap:16px;font-size:29px;color:var(--cream)}
+.beats .b{display:flex;gap:18px;align-items:baseline}
+.beats .n{color:var(--accent);font-family:ui-monospace,monospace;font-size:24px;min-width:34px}
+.beats .mut{color:var(--muted)}
+.foot{margin-top:auto;font-size:24px;color:var(--muted);border-top:1px solid var(--line);padding-top:28px}
+.foot b{color:var(--cream)}
+</style></head><body><div class="stage">
+  <div class="kicker">Fetch centrepiece &middot; 80 seconds</div>
+  <div class="h">The whole loop, inside one<br>ASI:One conversation.</div>
+  <div class="badge">&#9679; PLACEHOLDER &mdash; the live ASI:One capture (account-bound) splices here (V7)</div>
+  <div class="beats">
+    <div class="b"><span class="n">1</span><span>Report the incident in plain English <span class="mut">&mdash; no custom frontend</span></span></div>
+    <div class="b"><span class="n">2</span><span>Agent returns triage + matched precedent + <b>risk LOW</b> + plan &amp; rollback</span></div>
+    <div class="b"><span class="n">3</span><span>Type <b>approve</b> &mdash; bound to the chat sender's address, logged as the authorising principal</span></div>
+    <div class="b"><span class="n">4</span><span>Real Jira ticket closes &middot; hash-chained audit</span></div>
+    <div class="b"><span class="n">5</span><span>Same session, second occurrence: <b>15 seconds</b>, Standing Approval &mdash; <b>the second time is free</b></span></div>
+  </div>
+  <div class="foot">3 agents on Agentverse &middot; Agent Chat Protocol &middot; discoverable via ASI:One &middot; <b>runs without any custom frontend</b></div>
+</div></body></html>

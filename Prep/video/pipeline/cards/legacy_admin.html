@@ -1,0 +1,129 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+/* Deliberately dated enterprise ITSM console — the "manual loop" before-state (V2 time-lapse).
+   Built, rights-safe (no real product screengrab, no humans filmed). Playwright grinds through it;
+   ffmpeg then 8x + clock overlay. */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1920px;height:1080px;background:#c3c7cc;font-family:Tahoma,Verdana,Geneva,sans-serif;color:#1a1a1a;overflow:hidden}
+.win{width:1920px;height:1080px;display:grid;grid-template-rows:64px 40px 1fr;background:#e9eaec}
+.titlebar{background:linear-gradient(#3a5a8c,#2c4470);color:#fff;display:flex;align-items:center;padding:0 18px;gap:14px}
+.titlebar .logo{width:26px;height:26px;background:#d9a441;border:2px solid #fff;border-radius:3px}
+.titlebar b{font-size:20px;letter-spacing:.5px}
+.titlebar .sub{font-size:13px;opacity:.8;margin-left:6px}
+.titlebar .user{margin-left:auto;font-size:13px;opacity:.9}
+.toolbar{background:#dfe1e4;border-bottom:1px solid #9aa0a6;display:flex;align-items:center;gap:2px;padding:0 8px}
+.tab{padding:8px 20px;font-size:14px;color:#20304a;border:1px solid transparent;border-bottom:none;cursor:pointer}
+.tab.active{background:#f4f5f6;border-color:#9aa0a6;font-weight:bold}
+.body{display:grid;grid-template-columns:280px 1fr;overflow:hidden}
+.nav{background:#eef0f2;border-right:1px solid #b9bec4;padding:14px 0}
+.nav .item{padding:11px 22px;font-size:14px;color:#26364f;cursor:pointer;border-left:4px solid transparent}
+.nav .item.active{background:#dbe4f0;border-left-color:#2c4470;font-weight:bold}
+.nav .grp{padding:14px 22px 6px;font-size:11px;letter-spacing:1px;color:#7a828c;text-transform:uppercase}
+.main{padding:26px 34px;overflow:auto;background:#f4f5f6}
+.screen{display:none}
+.screen.on{display:block}
+h2{font-size:22px;color:#20304a;margin-bottom:6px}
+.crumb{font-size:12px;color:#7a828c;margin-bottom:18px}
+.card{background:#fff;border:1px solid #c2c7cd;border-radius:3px;padding:18px 20px;margin-bottom:16px;box-shadow:0 1px 0 #dfe2e6}
+.card h3{font-size:15px;color:#2c4470;margin-bottom:10px;border-bottom:1px solid #e3e6ea;padding-bottom:8px}
+.kv{display:flex;font-size:14px;line-height:2.0}
+.kv .k{width:200px;color:#5a626c}
+.kv .v{color:#1a1a1a}
+.err{color:#a3232a;font-weight:bold}
+.searchbar{display:flex;gap:8px;margin-bottom:16px}
+.searchbar input{flex:1;font-size:15px;padding:9px 12px;border:1px solid #9aa0a6;border-radius:2px;background:#fff}
+.searchbar button{font-size:14px;padding:9px 20px;background:#3a5a8c;color:#fff;border:1px solid #2c4470;border-radius:2px;cursor:pointer}
+.result{padding:12px 14px;border:1px solid #d6dade;border-radius:2px;margin-bottom:10px;background:#fff;cursor:pointer}
+.result .t{color:#1a4fa0;font-size:15px;text-decoration:underline}
+.result .m{color:#7a828c;font-size:12px;margin-top:4px}
+.tag-wrong{color:#a3232a;font-size:11px;border:1px solid #a3232a;border-radius:8px;padding:1px 7px;margin-left:8px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;color:#5a626c;margin-bottom:5px}
+.field input,.field select{font-size:14px;padding:8px 10px;border:1px solid #9aa0a6;width:520px;background:#fff}
+.btn{font-size:14px;padding:10px 22px;background:#3a5a8c;color:#fff;border:1px solid #2c4470;cursor:pointer;border-radius:2px}
+.approval{background:#fff7e0;border:1px solid #e0c060;padding:16px 20px;border-radius:3px;color:#7a5a12;font-size:15px}
+.approval b{color:#8a5a00}
+.spin{display:inline-block;margin-right:8px}
+.statusbar{position:fixed;bottom:0;left:0;width:1920px;background:#dfe1e4;border-top:1px solid #9aa0a6;font-size:12px;color:#5a626c;padding:6px 18px}
+</style></head><body>
+<div class="win">
+  <div class="titlebar"><div class="logo"></div><b>MediaCo ServiceDesk</b>
+    <span class="sub">Enterprise IT Operations Console &mdash; v6.2 (legacy)</span>
+    <span class="user">signed in: ops.duty &nbsp;|&nbsp; SLA clock running</span></div>
+  <div class="toolbar">
+    <div class="tab active" id="tab-inc">Incident INC-88213</div>
+    <div class="tab" id="tab-kb">Knowledge Base</div>
+    <div class="tab" id="tab-admin">Admin Console</div>
+    <div class="tab" id="tab-appr">Approvals</div>
+  </div>
+  <div class="body">
+    <div class="nav">
+      <div class="grp">Service Desk</div>
+      <div class="item active">Open incidents (47)</div>
+      <div class="item">My queue (12)</div>
+      <div class="item">Knowledge base</div>
+      <div class="grp">Fulfilment</div>
+      <div class="item">EPG / Publisher admin</div>
+      <div class="item">Change approvals</div>
+      <div class="item">Audit</div>
+    </div>
+    <div class="main" id="main">
+      <div class="screen on" id="s-inc">
+        <h2>Incident INC-88213 &mdash; EPG publish failed (evening slot)</h2>
+        <div class="crumb">Service Desk &rsaquo; Open incidents &rsaquo; INC-88213 &nbsp;|&nbsp; opened 00:00 &middot; priority P2</div>
+        <div class="card"><h3>Reported symptom (raw)</h3>
+          <div class="kv"><div class="k">Description</div><div class="v">"epg publsh failing agian for the 9pm slot?? guide showing blank on skyq"</div></div>
+          <div class="kv"><div class="k">Error code (user-entered)</div><div class="v err">err 4102 (?)</div></div>
+          <div class="kv"><div class="k">Assigned to</div><div class="v">ops.duty</div></div>
+          <div class="kv"><div class="k">Documented fix</div><div class="v">unknown &mdash; search the knowledge base</div></div>
+        </div>
+        <div class="card"><h3>Next step</h3><div style="font-size:14px;color:#5a626c">Find the runbook, apply the change in the admin console, then raise a change approval. Typical time-to-resolve at this desk: <b>8h 51m</b>.</div></div>
+      </div>
+
+      <div class="screen" id="s-kb">
+        <h2>Knowledge base search</h2>
+        <div class="crumb">Knowledge &rsaquo; Search</div>
+        <div class="searchbar"><input id="kbq" value=""><button>Search</button></div>
+        <div id="kbresults">
+          <div class="result"><div class="t">KB-2231 &mdash; EPG payload schema reference<span class="tag-wrong">not the fix</span></div><div class="m">Last updated 2019 &middot; 14 pages &middot; schema tables only</div></div>
+          <div class="result"><div class="t">KB-4477 &mdash; Sky Q device troubleshooting<span class="tag-wrong">wrong system</span></div><div class="m">Consumer device guide &middot; not the publisher</div></div>
+          <div class="result"><div class="t">KB-0001 &mdash; EPG republish after missing episode metadata</div><div class="m">The documented fix &middot; buried on page 3 of results</div></div>
+        </div>
+      </div>
+
+      <div class="screen" id="s-admin">
+        <h2>EPG / Publisher admin console</h2>
+        <div class="crumb">Fulfilment &rsaquo; Publisher admin &rsaquo; Republish</div>
+        <div class="card"><h3>Manual republish (6 fields)</h3>
+          <div class="field"><label>Schedule item id</label><input value="schedule_item 18"></div>
+          <div class="field"><label>Channel</label><input value="MediaCo One"></div>
+          <div class="field"><label>Corrected error class</label><input id="ecode" value=""></div>
+          <div class="field"><label>Metadata source</label><select><option>rights-cleared catalogue</option></select></div>
+          <div class="field"><label>Change ticket #</label><input value="(raise approval first)"></div>
+          <button class="btn" id="submitbtn">Submit republish &rarr; raise approval</button>
+        </div>
+      </div>
+
+      <div class="screen" id="s-appr">
+        <h2>Change approvals</h2>
+        <div class="crumb">Fulfilment &rsaquo; Change approvals</div>
+        <div class="approval"><span class="spin">&#8987;</span><b>CHG-55190</b> &mdash; awaiting approval from <b>Ops Lead</b>. Sent 00:11. Status: <b>PENDING</b> &middot; in queue behind 5 other changes. Email sent. Waiting&hellip;</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="statusbar">MediaCo ServiceDesk v6.2 &middot; session ops.duty &middot; SLA breach in: <span id="sla">08:51:00</span> &middot; changes require Ops Lead approval</div>
+<script>
+  function show(id, tabid){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+    document.getElementById(id).classList.add('on');
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    if(tabid) document.getElementById(tabid).classList.add('active');
+    document.getElementById('main').scrollTop=0;
+  }
+  document.getElementById('tab-inc').onclick=()=>show('s-inc','tab-inc');
+  document.getElementById('tab-kb').onclick=()=>show('s-kb','tab-kb');
+  document.getElementById('tab-admin').onclick=()=>show('s-admin','tab-admin');
+  document.getElementById('tab-appr').onclick=()=>show('s-appr','tab-appr');
+  document.getElementById('submitbtn').onclick=()=>show('s-appr','tab-appr');
+</script>
+</body></html>

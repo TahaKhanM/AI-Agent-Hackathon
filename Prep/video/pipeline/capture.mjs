@@ -63,8 +63,9 @@ export async function recordSession(startURL, outdir, outName, drive, w = VIEW.w
   return finalPath
 }
 
-// ---- CLI ----
-const [, , mode, ...rest] = process.argv
+// ---- CLI (only when run directly, not when imported) ----
+const _runDirect = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
+const [, , mode, ...rest] = _runDirect ? process.argv : [null, null, null]
 if (mode === 'screenshot') {
   const [src, out, w, h, scale] = rest
   screenshot(src, out, w, h, scale).then(p => { console.log('screenshot ->', p) })
