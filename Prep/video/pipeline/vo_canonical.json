@@ -1,0 +1,19 @@
+{
+  "_doc": "Canonical reconciled voice-over — the ONE source of truth per shot (V1). shot-list.md VO cues and vo-script.md blockquotes are both derived from this and MUST match it word-for-word (typography/whitespace-normalised). check_vo_sync.py enforces it. Number honesty per Prep/final-numbers.md; banned words per Idea/refinement/04 §0. Shot 0 has NO VO (music/beat only).",
+  "shots": {
+    "0": "",
+    "1": "When the CrowdStrike outage took broadcasters off air, the fix was already documented — humans applied it by hand, thousands of times. One of us watched that loop every day inside Disney+ operations.",
+    "2": "Read the ticket, hunt the runbook, click through a legacy admin console, wait in an approval queue. The industry average: eight hours fifty-one minutes — MetricNet's business-hours benchmark. And at ServiceNow's own support desk, over sixty percent of incidents were repeats — the fix already existed, and nobody could find it. Precedent remembers every fix your organisation has ever applied, and applies it again: risk-classified, approval-gated, audited, reversible.",
+    "3": "This is MediaCo, our simulated broadcaster — seeded entirely with real public data, running on a real Jira Service Management instance.",
+    "4": "A publish failure — filed with typos and the wrong error code; the inputs are mutated every run. Precedent triages it, retrieves the organisation's own documented fix, classifies the risk, and writes the rollback before asking. One human click approves. It executes, verifies, and closes the real Jira ticket with the evidence attached. Then the operations lead pre-approves this fix class — a standing approval she can revoke at any time.",
+    "5": "Everything you just saw needs no custom frontend at all. Precedent's agents live on Fetch.ai's Agentverse and speak the Chat Protocol — the gateway agent, the retrieval agent and the execution agent are separate Agentverse agents passing messages between themselves. Here's the whole loop inside one ASI:One conversation: report the incident in plain English… get the plan and the rollback… type 'approve' — that approval is bound to the chat sender's address and logged as the authorising principal… and the real Jira ticket closes. Same session, second occurrence: fifteen seconds, standing approval — the second time is free. The agents stay registered and running on Agentverse after this hackathon.",
+    "6": "When a remembered fix fails, verification catches it, the pre-written rollback restores the system, and the class is demoted — it must earn approval again. And when the only documented fix is one it isn't permitted to read — here, a rights runbook restricted to another team — it refuses, and routes a dossier to the humans who are. It knows what it's not allowed to touch — down to the permissions on the runbook itself.",
+    "7": "Does it hold at scale? Twenty-five thousand real incidents, seeded as day-one memory: ninety-four percent arrived with their fix already precedented — and those repeats still took a median of eighteen calendar hours by hand. Permission-checked retrieval over that store leaks nothing: zero leaks across five thousand two hundred and nineteen deny-expected queries, six of six attacks, graded by an independent oracle. It runs entirely on open-weight models.",
+    "8": "AI SREs fix broken code — but in real enterprises the fix is almost never code. It's a documented change, waiting to be remembered. ServiceNow paid two-point-eight-five billion dollars for Moveworks; the memory layer is worth buying. We're Precedent — every incident resolved becomes precedent. Repo, live agents and the ASI:One chat are linked below."
+  },
+  "memorable_lines": [
+    "the second time is free",
+    "it knows what it's not allowed to touch"
+  ],
+  "slot_seconds": {"0": 14, "1": 15, "2": 26, "3": 8, "4": 40, "5": 80, "6": 28, "7": 27, "8": 30}
+}

@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --ink: #0B0F14;        /* deck-stage near-black */
+    --cream: #F1F1E2;      /* brand cream */
+    --indigo: #3C3B62;     /* seal indigo */
+    --accent: #6E8FD6;     /* legible cool-blue accent on dark */
+    --muted: #9aa0ad;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; background: var(--ink); overflow: hidden; }
+  .stage {
+    width: 1920px; height: 1080px;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 0 220px;
+    background:
+      radial-gradient(1200px 700px at 30% 20%, rgba(60,59,98,0.35), transparent 60%),
+      radial-gradient(1000px 800px at 90% 100%, rgba(110,143,214,0.10), transparent 55%),
+      var(--ink);
+    color: var(--cream);
+    font-family: "Helvetica Neue", Arial, sans-serif;
+  }
+  .kicker {
+    font-size: 30px; letter-spacing: 0.42em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; margin-bottom: 40px;
+  }
+  .line1 {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: 92px; line-height: 1.08; font-weight: 400; color: var(--cream);
+    max-width: 1380px; letter-spacing: -0.01em;
+  }
+  .rule { width: 140px; height: 4px; background: var(--accent); margin: 56px 0; border-radius: 2px; }
+  .line2 {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: 66px; line-height: 1.12; font-weight: 400; color: #ffffff;
+    max-width: 1300px;
+  }
+  .line2 em { font-style: italic; color: var(--accent); }
+  .wordmark {
+    position: absolute; left: 220px; bottom: 88px;
+    font-family: "Iowan Old Style", Palatino, Georgia, serif;
+    font-size: 26px; letter-spacing: 0.5em; color: var(--muted); text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="kicker">July 2024</div>
+    <div class="line1">A global IT outage takes broadcasters off air.</div>
+    <div class="rule"></div>
+    <div class="line2">The fix was <em>already documented</em>.</div>
+    <div class="wordmark">Precedent</div>
+  </div>
+</body>
+</html>
