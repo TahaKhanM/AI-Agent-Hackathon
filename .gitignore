@@ -25,11 +25,6 @@ Thumbs.db
 kaggle.json
 access_token
 
-# Video production drop — media, node tooling, browser binaries, VO/music/exports.
-# NOTHING under here is ever committed (Prompts/08 video pipeline). Plan-file edits
-# live in Prep/video/ and pipeline SOURCE in Prep/video/pipeline/ (both committed).
-precedent-video-drop/
-
 # Node
 node_modules/
 npm-debug.log*

@@ -73,12 +73,9 @@ bench-uci:
 live-drift:
 	$(PY) scripts/live_drift_ttc.py
 
-# Pre-freeze guard (Fri 21:00): everything that must be true before recording.
-# The placeholder grep is scoped to SHIPPABLE surfaces only (submission drafts + the bench
-# results table) — the internal Plan/Idea planning docs legitimately use ‹…› mail-merge tokens.
-# It matches a COMPLETE ‹…› token, so self-referential prose ("Ctrl-F for `‹`") never trips it.
-# [[WAIT:…]] sentinels are intentional on the PR-README until the human fills them, so they are
-# NOT failed here (the deck PDF export enforces its own zero-[[WAIT]] rule in the B6 sweep).
-freeze-check: check-open-weight test secrets-scan
-	@! grep -rnE "‹[^›]*›" Prep/submissions precedent_memory/bench/RESULTS.md 2>/dev/null || (echo "unfilled ‹…› placeholder on a shippable surface — fill or delete"; exit 1)
+# Release guard: everything that must be true before a public cut.
+# The placeholder grep matches a COMPLETE ‹…› token on shippable surfaces (README + bench
+# results), so self-referential prose ("Ctrl-F for `‹`") never trips it.
+freeze-check: check-open-weight test lint secrets-scan
+	@! grep -rnE "‹[^›]*›" README.md precedent_memory/bench/RESULTS.md 2>/dev/null || (echo "unfilled ‹…› placeholder on a shippable surface — fill or delete"; exit 1)
 	@echo "freeze-check passed"

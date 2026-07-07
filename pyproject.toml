@@ -1,7 +1,7 @@
 [project]
 name = "precedent"
 version = "0.1.0"
-description = "Precedent — an agent that retrieves and executes an organisation's own documented fixes with approval gates, audit and rollback. UK AI Agent Hackathon EP5 (Conduct / Fetch.ai / BasedAI)."
+description = "Precedent — an agent that retrieves and executes an organisation's own documented fixes with approval gates, audit and rollback."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -47,14 +47,18 @@ line-length = 100
 target-version = "py311"
 # data/analysis holds one-off exploratory pandas scripts (committed as evidence);
 # their idioms (e.g. `series == False` for elementwise masks) are intentional.
-# docs/deck/build_deck.py is a one-off deck-generation script whose long lines are the
-# verbatim on-slide text (committed so the deck PDFs are reproducible).
-extend-exclude = ["data", ".venv", "docs/deck"]
+extend-exclude = ["data", ".venv"]
 
 [tool.ruff.lint]
 # The open-weight guard: model-name tokens may appear ONLY in precedent/models.py.
 # Enforced separately by scripts/check_open_weight.sh (grep), run in CI.
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# The console page is one server-rendered HTML template string; its long lines are
+# verbatim on-screen markup/prose. All other rules still apply to both files.
+"console/app.py" = ["E501"]
+"console/showcase.py" = ["E501"]
 
 [build-system]
 requires = ["hatchling"]

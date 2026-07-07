@@ -2,7 +2,7 @@
 
 **The systems are simulated; the content is real public data.** Precedent's MediaCo sim seeds from
 committed public datasets under stated licences. Only licence-*window* terms in the rights DB are
-synthesised, by the rule in `Idea/refinement/01-realistic-data-plan.md` §2. Source of truth for the
+synthesised, by the rule in `docs/idea/refinement/01-realistic-data-plan.md` §2. Source of truth for the
 raw pull: `data/raw/SOURCES.md`.
 
 ## Provenance table
@@ -30,7 +30,7 @@ The Conduct rubric rewards realistic public data, so the committed raw snapshot 
 |---|---|---|
 | `data/raw/kaggle/netflix_titles.csv` | 8,807 | 2,634 blank `director`, 831 blank `country`, 1 duplicate title |
 | `data/raw/kaggle/disney_plus_titles.csv` | 1,450 | 473 blank `director`, 219 blank `country` |
-| `data/raw/freeview-epg.xml` | 44,680 programme rows across 271 channels | fuzzy titles / cross-source mismatches left intact |
+| `data/raw/freeview-epg.xml` — **removed 6 Jul 2026** (read by no loader; GPL-3.0 "personal use" licence unsuited to a public repo; recoverable from git history) | 44,680 programme rows across 271 channels | never used at runtime |
 
 These nulls, duplicate titles, and fuzzy-match failures are what trigger the demo incidents and the
 messy-ticket mutations — removing them would remove the realism the rubric rewards.
