@@ -15,6 +15,9 @@ import sys
 
 SIM_PORT = os.environ.get("PRECEDENT_SIM_PORT", "8100")
 CONSOLE_PORT = os.environ.get("PRECEDENT_CONSOLE_PORT", "8000")
+# Default localhost-only (airplane-mode safe). Set PRECEDENT_HOST=0.0.0.0 to let
+# other devices on the same network reach the console.
+HOST = os.environ.get("PRECEDENT_HOST", "127.0.0.1")
 
 
 def main() -> None:
@@ -25,9 +28,11 @@ def main() -> None:
 
     procs = [
         subprocess.Popen([sys.executable, "-m", "uvicorn", "sim.app:app",
-                          "--port", SIM_PORT, "--log-level", "warning"], env=env),
+                          "--host", "127.0.0.1", "--port", SIM_PORT,
+                          "--log-level", "warning"], env=env),
         subprocess.Popen([sys.executable, "-m", "uvicorn", "scripts.demo_server:app",
-                          "--port", CONSOLE_PORT, "--log-level", "warning"], env=env),
+                          "--host", HOST, "--port", CONSOLE_PORT,
+                          "--log-level", "warning"], env=env),
     ]
     print(f"MediaCo sim   -> http://127.0.0.1:{SIM_PORT}/health")
     print(f"Judge console -> http://127.0.0.1:{CONSOLE_PORT}/   (T1 drives in-process)")

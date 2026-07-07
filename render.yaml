@@ -1,0 +1,17 @@
+# Render Blueprint — one-click always-on hosting for the Precedent demo.
+# In Render: New → Blueprint → connect this GitHub repo → it reads this file.
+# Free plan: reachable 24/7; sleeps after ~15 min idle and cold-starts (~30-60s)
+# on the next visit. No payment card required.
+services:
+  - type: web
+    name: precedent-demo
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # Console listens on all interfaces; Render injects $PORT at runtime.
+      - key: PRECEDENT_HOST
+        value: 0.0.0.0
+      # No VENICE_API_KEY on purpose → offline/canned mode, no external calls.

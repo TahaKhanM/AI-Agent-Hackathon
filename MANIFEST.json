@@ -1,0 +1,5 @@
+{
+  "kernel_hash_expected": "bf0cfad5fc9e",
+  "note": "Frozen at build time. If /api/kernel-hash disagrees, someone edited the checked-in deterministic surface (guided beats, runbook, plain-english translations, agent identities). The dbs are per-run state and deliberately excluded.",
+  "source": "MANIFEST.json (committed) vs console.showcase.compute_kernel_hash()"
+}
