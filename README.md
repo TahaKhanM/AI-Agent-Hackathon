@@ -98,7 +98,8 @@ cp .env.example .env         # optional — the demo runs fully offline without 
 
 # Run the demo (MediaCo sim + console, seeded with real public data)
 make sim                     # sim on :8100 + console on :8000
-open http://localhost:8000   # guided tour: 6 beats, ~90 seconds, self-paced
+open http://localhost:8000   # "The Approver's Seat": you take the approver's chair
+                             # and drive the real kernel through 8 self-paced chapters
 
 # Prove the claims yourself
 make test                    # 256 tests, 0 skipped, ~20 s
@@ -130,7 +131,7 @@ principal ([proofs](docs/evidence/LIVE-PROOFS.md)).
 | [`precedent/`](precedent/) | Core loop: typed contracts, deterministic extractor + fingerprint, YAML policy engine, approval ladder + standing-approval fast-path, orchestrator, model registry |
 | [`precedent_memory/`](precedent_memory/) | Permission-aware memory library: lineage-conjunction ACLs, precompiled policy bitmaps, hash-chained audit, fail-closed retrieval, conformance bench + oracle |
 | [`sim/`](sim/) | MediaCo simulated broadcast stack (scheduler / rights / publisher / KB) seeded with real public data — real content, simulated services, messiness preserved |
-| [`console/`](console/) | Server-rendered demo console + guided showcase tour |
+| [`console/`](console/) | Server-rendered demo — "The Approver's Seat" interactive chaptered tour |
 | [`agents/`](agents/) | Fetch.ai rails: Watcher / Librarian / Operator mailbox agents |
 | [`data/`](data/) | Committed seed data + the UCI baseline analysis ([provenance & licences](docs/data-provenance.md)) |
 | [`docs/`](docs/) | [Thesis & specs](docs/idea/), [canonical numbers](docs/numbers.md), [verified market research](docs/research/00-verified-claims.md), [evidence index](docs/evidence/), [ops map](docs/ops/services.md), [demo scripts](docs/demo/), [hackathon record](docs/archive/hackathon/) |

@@ -112,14 +112,35 @@ def _cache_key(kind: str, role: str, payload: dict) -> str:
 
 
 # --------------------------------------------------------------------------- #
+# Honest model-call counter — counts REAL network calls to the model endpoint
+# (chat/embed), never cache hits. The demo surface reads this to render
+# "Model calls this session: 0" while the zero-LLM fast path resolves: the
+# counter is the proof, not a claim. View-only; participates in no decision.
+# --------------------------------------------------------------------------- #
+_MODEL_CALLS = 0
+
+
+def model_call_count() -> int:
+    """Number of real HTTP calls made to the model endpoint this process/session."""
+    return _MODEL_CALLS
+
+
+def reset_model_calls() -> None:
+    global _MODEL_CALLS
+    _MODEL_CALLS = 0
+
+
+# --------------------------------------------------------------------------- #
 # HTTP (isolated so tests monkeypatch one seam)
 # --------------------------------------------------------------------------- #
 def _post(url: str, payload: dict, *, timeout: float) -> dict:
     """POST JSON, return parsed JSON. Raises on any transport/HTTP error. Tests
     monkeypatch this single function; nothing else in the module touches network."""
+    global _MODEL_CALLS
     resp = httpx.post(url, json=payload, headers=_headers(), timeout=timeout)
     resp.raise_for_status()
-    return resp.json()
+    _MODEL_CALLS += 1     # count only a SUCCESSFUL model response — a timed-out/refused
+    return resp.json()    # attempt consulted no model (the deterministic path handled it)
 
 
 # --------------------------------------------------------------------------- #

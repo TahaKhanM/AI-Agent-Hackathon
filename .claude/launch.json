@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "precedent-demo",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": ["scripts/run_demo.py"],
+      "port": 8000,
+      "env": {
+        "VENICE_BASE_URL": "http://127.0.0.1:9/unreachable",
+        "PRECEDENT_VENICE_CACHE": "",
+        "JIRA_BASE_URL": "",
+        "JIRA_EMAIL": "",
+        "JIRA_API_TOKEN": "",
+        "JIRA_PROJECT_KEY": ""
+      }
+    }
+  ]
+}

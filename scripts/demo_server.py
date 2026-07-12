@@ -18,6 +18,7 @@ import asyncio
 import os
 
 from agents import approval
+from agents.watcher import decide_from_reply
 from console.app import app
 from console.demo_state import STATE
 from precedent import console_link, orchestrator
@@ -152,6 +153,81 @@ def api_drive_approve(n: int, principal: str = "ops-lead"):
     return _result(n, res)
 
 
+@app.get("/api/gate/pending")
+def api_gate_pending():
+    """Expose held approvals SERVER-SIDE so the gate card survives a refresh, a second
+    tab, or the visitor's phone — replacing the old client-only `window._gate` that was
+    lost on reload. Fail-closed: expired holds are pruned before we answer."""
+    with STATE._lock:
+        _prune_pending()
+        out = []
+        for inc_id, prepared in _PENDING.items():
+            req = getattr(prepared, "approval_request", None)
+            try:
+                n = int(inc_id.split("-")[1])
+            except (IndexError, ValueError):
+                continue
+            out.append({"incident_id": inc_id, "n": n,
+                        "plan_hash": req.plan_hash if req else None,
+                        "expires_at": getattr(req, "expires_at", None),
+                        "preview": _plan_preview(prepared)})
+        return {"pending": out}
+
+
+@app.post("/api/gate/{n}/decide")
+def api_gate_decide(n: int, text: str = "", principal: str = "visitor"):
+    """The participatory 'try to trick the gate' beat, wired to the REAL vocabulary
+    guard (agents.watcher.decide_from_reply). Free text in; only an explicit approve
+    token executes. A question ('what does this do?'), a bare 'ok'/'yes please', or a
+    negation ('don't approve') RE-PRESENTS the card — it never executes. The verdict
+    here is the same deterministic function the chat loop and its tests use."""
+    verdict = decide_from_reply(text)
+    if verdict == "approve":
+        res = api_drive_approve(n, principal=principal)
+        return {"verdict": "approve", **res}
+    if verdict == "reject":
+        res = api_drive_reject(n, principal=principal)
+        return {"verdict": "reject", **res}
+    return {"verdict": "represent", "incident": n,
+            "detail": "Ambiguous. Here is the card again — only an explicit approval executes."}
+
+
+def _mutate_hash(plan_hash: str) -> str:
+    """Flip one hex character of a 64-char plan hash to simulate a forged approval."""
+    if not plan_hash:
+        return "0" * 64
+    i = len(plan_hash) - 1
+    ch = plan_hash[i]
+    return plan_hash[:i] + ("0" if ch != "0" else "1")
+
+
+@app.post("/api/drive/{n}/forge")
+def api_drive_forge(n: int, principal: str = "visitor"):
+    """The forgery beat: approve the HELD change with a plan hash that does NOT match the
+    plan Precedent prepared. The real tamper check in commit_execution rejects it —
+    nothing executes, an 'approval_decided rejected/tampered' row is written, and the
+    genuine hold stays open so the visitor can still approve for real afterwards."""
+    inc_id = f"INC-{n}"
+    with STATE._lock:
+        row = approval.lookup_pending(STATE.conn, inc_id)
+        prepared = _PENDING.get(inc_id)
+        if row is None or prepared is None:
+            return {"incident": n, "status": "no_live_approval",
+                    "detail": "expired or absent — nothing to forge"}
+        forged = _mutate_hash(row["plan_hash"])
+        decision = ApprovalDecision(incident_id=inc_id, plan_hash=forged, decision="approve",
+                                    approver_principal=principal, channel="console",
+                                    decided_at=db.utcnow_iso())
+        res = orchestrator.commit_execution(prepared, conn=STATE.conn,
+                                            tools=SimTools(base_url=SIM_URL),
+                                            trace=console_link.in_process_trace(STATE),
+                                            decision=decision)
+        # deliberately do NOT mark/pop the pending — the honest approval remains available
+    outcome = res.step_results[0].get("outcome") if res.step_results else "rejected"
+    return {"incident": n, "status": outcome, "forged_hash": forged[:16] + "…",
+            "detail": "forged approval rejected by the plan-hash tamper check (fail-closed)"}
+
+
 @app.post("/api/drive/{n}/reject")
 def api_drive_reject(n: int, principal: str = "ops-lead"):
     """Reject a HELD drive (the card's Reject button, P1.7). Marks the gate rejected, drops the
@@ -179,12 +255,20 @@ def api_arm_flake(n: int):
 
 
 def _sync_tick() -> None:
-    """One ACL re-sync tick (runs in a worker thread — never on the event loop). Holds
-    STATE._lock only for the brief sync write, and COMMITS so STATE.conn never lingers with an
-    open write transaction that would block the drive's separate connection (P0.4 / the
-    sync()-never-commits footgun)."""
+    """One ACL re-sync / freshness tick (runs in a worker thread — never on the event loop).
+
+    Fixes the freshness footgun: plain sync() of an UNCHANGED source does not re-stamp
+    last_verified_at, so a restricted-but-authorised record (e.g. INC-2's scheduler fix)
+    silently goes dark ~60s into a demo. When no LIVE Jira is configured (airplane mode —
+    the seeded local store IS the source of truth) we run the gated freshness heartbeat,
+    which re-affirms every non-revoked source and recompiles — keeping authorised memory
+    readable indefinitely without ever masking an un-polled upstream tightening. With a
+    real Jira configured, refresh_cached_freshness() instead runs a genuine poll (P0.6)."""
     with STATE._lock:
-        syncmod.sync(STATE.source, conn=STATE.conn)
+        if syncmod.live_source_configured():
+            syncmod.sync(STATE.source, conn=STATE.conn)
+        else:
+            syncmod.refresh_cached_freshness(STATE.conn)   # airplane heartbeat
         STATE.conn.commit()
 
 

@@ -126,10 +126,76 @@ def api_kernel_hash():
     }
 
 
+@app.get("/api/model-calls")
+def api_model_calls():
+    """Honest counter of REAL network calls to the open-weight model endpoint this
+    session (never cache hits). The demo header renders this as "Model calls this
+    session: N" — the zero-LLM fast path keeps it at 0, so the number IS the proof.
+    """
+    from precedent import venice
+    return {"model_calls": venice.model_call_count()}
+
+
+# The real-tamper affordance keeps the ORIGINAL payload of every row it corrupts so
+# Restore is a true round-trip. Session-scoped in spirit (single-writer STATE.conn);
+# a tampered byte makes the REAL /api/audit/verify fail at that row — no fake pill.
+_TAMPER_BACKUP: dict[int, str] = {}
+
+
+def _tamper_one(payload: str | None) -> str:
+    """Return a payload string guaranteed to differ from the input by one byte, so the
+    stored row hash no longer matches its recomputed value."""
+    p = payload or "{}"
+    last = p[-1]
+    return p[:-1] + ("0" if last != "0" else "1")
+
+
+@app.post("/api/audit/tamper")
+def api_audit_tamper(seq: int | None = None):
+    """REAL tamper: flip one byte in one audit row's payload (default: the newest row,
+    or the caller's chosen seq). The row's stored hash is left untouched, so the REAL
+    verifier below fails at exactly this row. Restore is a true round-trip. This
+    replaces the old cosmetic "Tamper (visual)" button — nothing is faked."""
+    from precedent_memory import audit
+    with STATE._lock:
+        if seq is None:
+            row = STATE.conn.execute(
+                "SELECT seq FROM audit_log ORDER BY seq DESC LIMIT 1").fetchone()
+            if row is None:
+                return {"ok": False, "detail": "audit log is empty"}
+            seq = row["seq"]
+        row = STATE.conn.execute(
+            "SELECT payload FROM audit_log WHERE seq = ?", (seq,)).fetchone()
+        if row is None:
+            return {"ok": False, "detail": f"no audit row #{seq}"}
+        _TAMPER_BACKUP.setdefault(seq, row["payload"] or "{}")
+        STATE.conn.execute("UPDATE audit_log SET payload = ? WHERE seq = ?",
+                            (_tamper_one(row["payload"]), seq))
+        STATE.conn.commit()
+        verified = audit.verify_chain(conn=STATE.conn)
+    return {"ok": True, "tampered_seq": seq, "verified": verified,
+            "detail": f"flipped one byte of audit row #{seq}"}
+
+
+@app.post("/api/audit/restore")
+def api_audit_restore():
+    """Undo every real tamper: rewrite each corrupted row's original payload, so the
+    REAL verifier passes again. Deterministic, no re-hashing tricks."""
+    from precedent_memory import audit
+    with STATE._lock:
+        for seq, original in list(_TAMPER_BACKUP.items()):
+            STATE.conn.execute("UPDATE audit_log SET payload = ? WHERE seq = ?",
+                               (original, seq))
+        STATE.conn.commit()
+        _TAMPER_BACKUP.clear()
+        verified = audit.verify_chain(conn=STATE.conn)
+    return {"ok": True, "verified": verified}
+
+
 @app.get("/api/audit/verify")
 def api_audit_verify():
     """REAL hash-chain verification over on-disk audit rows. Read-only. This is
-    the endpoint the BasedAI Determinism strip's chain pill reflects.
+    the endpoint the audit-chain proof reflects.
     """
     from precedent_memory import audit
     with STATE._lock:
@@ -185,6 +251,9 @@ def api_trace(req: TraceReq):
 
 @app.post("/api/demo/reset")
 def api_reset():
+    from precedent import venice
+    _TAMPER_BACKUP.clear()
+    venice.reset_model_calls()
     return STATE.reset()
 
 
@@ -201,664 +270,539 @@ def api_change_record(incident_id: str):
 
 
 # --------------------------------------------------------------------------- #
-# The page
+# The page — "The Approver's Seat" (v2 demo). Server-rendered shell + a self-paced,
+# chaptered narrative that drives the REAL kernel at every beat. No frontend
+# framework, no inline handlers (one delegated listener off data-* attributes).
 # --------------------------------------------------------------------------- #
 @app.get("/", response_class=HTMLResponse)
 def index():
     return HTMLResponse(_PAGE)
 
 
-_PAGE = """<!doctype html>
-<html><head><meta charset="utf-8"><title>Precedent</title>
+
+
+
+
+
+
+
+_PAGE = r"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Precedent — The Approver's Seat</title>
 <style>
- /* ===== Light theme — matches the Precedent deck (cream / indigo / ink) ===== */
- body{font:14px/1.45 system-ui,sans-serif;margin:0;background:#f3f2ea;color:#2a2a48}
- header{padding:14px 20px;background:#ffffff;border-bottom:1px solid #e3e1d4;display:flex;
-   align-items:center;gap:16px;flex-wrap:wrap}
- h1{font-size:20px;margin:0;letter-spacing:.5px;color:#2a2a48}
- .banner{font-size:12px;color:#63627a;display:flex;gap:10px;flex-wrap:wrap}
- .pill{padding:2px 8px;border-radius:10px;background:#eceadd;color:#4a4963}
- .pill.bad{background:#fbe4e7;color:#9a2233}
- .pill.chip{background:#e6f4ec;color:#1c7a4f}
- main{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;padding:16px 20px}
- section{background:#ffffff;border:1px solid #e3e1d4;border-radius:10px;padding:14px;
-   box-shadow:0 1px 2px rgba(42,42,72,.04)}
- h2{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:#3c3b62;margin:0 0 10px}
- .bar{height:20px;border-radius:5px;background:#e7e5d8;position:relative;margin:6px 0}
- .bar>span{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:#2f9d6a}
- .baseline>span{background:#c39a4e}
- .inc{border:1px solid #e3e1d4;border-radius:8px;padding:10px;margin-bottom:10px;background:#fbfaf4}
- .inc .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
- .badge{font-size:11px;padding:2px 7px;border-radius:9px;background:#eceadd;color:#4a4963}
- .badge.deny{background:#fbe4e7;color:#9a2233}
- .badge.ok{background:#e6f4ec;color:#1c7a4f}
- .badge.standing{background:#ece6fb;color:#5b3fa6}
- .badge.ttr{background:#e6f4ec;color:#1c7a4f}
- button{font:12px system-ui;padding:5px 9px;border:1px solid #c9c7dd;background:#ffffff;
-   color:#3c3b62;border-radius:6px;cursor:pointer;margin:3px 3px 0 0}
- button:hover{background:#f0eff9;border-color:#a9a7c8}
- button.danger{border-color:#e0a9b2;background:#fdeef0;color:#9a2233}
- button.hero{border-color:#9bd3b7;background:#e9f6ef;color:#1c7a4f}
- .feed{max-height:280px;overflow:auto;font-family:ui-monospace,monospace;font-size:12px}
- .feed div{padding:3px 0;border-bottom:1px solid #edeadf}
- .muted{color:#7a7990}
- small.note{color:#7a7990}
- .stopwatch{font:22px ui-monospace,monospace;color:#1c7a4f;margin:2px 0 6px}
- .caveat{font-size:11px;color:#7a7990;margin-top:4px}
- .strip{font-size:12px;color:#1c7a4f;margin-top:6px}
- .gatecard{border:1px solid #9bd3b7;border-radius:8px;padding:12px;background:#f0f9f4}
- .diff{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
- .diff pre{background:#f5f4ec;border:1px solid #e3e1d4;border-radius:6px;padding:8px;
-   font-size:11px;white-space:pre-wrap;word-break:break-word;max-height:160px;
-   overflow:auto;margin:2px 0;color:#3a3a52}
- .dl{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#63627a}
- code{background:#f0efe6;padding:1px 5px;border-radius:4px;font-size:11px;color:#3c3b62}
- /* ---------- Showcase augmentation ---------- */
- .airbar{display:flex;align-items:center;gap:14px;padding:8px 20px;
-   background:linear-gradient(90deg,#faf3dc,#f6edcf);color:#7a5e1e;
-   border-bottom:1px solid #e6d6a0;font-size:12px;flex-wrap:wrap}
- .airbar .dot{width:8px;height:8px;border-radius:50%;background:#d8a52a;
-   box-shadow:0 0 8px rgba(216,165,42,.6)}
- .airbar button{background:#3c3b62;border:1px solid #302f52;color:#fff;
-   font-weight:600;padding:5px 12px;border-radius:6px;cursor:pointer;margin-left:auto}
- .airbar button:hover{background:#4a4880}
- .airbar .kh{font-family:ui-monospace,monospace;font-size:11px;color:#7a5e1e;
-   background:#fbf5e0;padding:2px 8px;border-radius:4px;border:1px solid #e6d6a0}
- .strip{margin:14px 20px;background:#ffffff;border:1px solid #e3e1d4;
-   border-radius:10px;padding:14px;box-shadow:0 1px 2px rgba(42,42,72,.04)}
- .strip h2{font-size:13px;text-transform:uppercase;letter-spacing:.6px;
-   color:#3c3b62;margin:0 0 10px;display:flex;justify-content:space-between;
-   align-items:center;gap:12px}
- .strip h2 .kick{font-size:10px;color:#1c7a4f;background:#e6f4ec;
-   border:1px solid #9bd3b7;padding:2px 8px;border-radius:9px;text-transform:none;
-   letter-spacing:.3px;font-weight:600}
- .ba{display:grid;grid-template-columns:1fr 1fr;gap:14px}
- .ba .col{background:#fbfaf4;border:1px solid #e3e1d4;border-radius:8px;padding:12px}
- .ba h3{font-size:13px;color:#2a2a48;margin:0 0 8px}
- .ba .old h3{color:#c07a3a}
- .ba .new h3{color:#1c7a4f}
- .ba ol{margin:0;padding-left:22px;font-size:12px;line-height:1.6;color:#4a4963}
- .ba ol li{margin-bottom:3px}
- .ba .t{font-family:ui-monospace,monospace;color:#7a7990;font-size:11px;
-   margin-right:6px}
- .hero-line{font-size:14px;color:#1c7a4f;text-align:center;padding:10px;
-   background:#e9f6ef;border:1px solid #9bd3b7;border-radius:8px;margin-top:12px;
-   font-weight:600;letter-spacing:.2px}
- .fetch-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:14px}
- .agents-list{display:flex;flex-direction:column;gap:8px}
- .agent-pill{background:#fbfaf4;border:1px solid #e3e1d4;border-radius:8px;
-   padding:10px 12px;display:grid;grid-template-columns:auto 1fr auto;gap:10px;
-   align-items:center}
- .agent-pill .role{font-weight:700;color:#2a2a48;font-size:13px}
- .agent-pill .purpose{color:#63627a;font-size:11px}
- .agent-pill .addr{font-family:ui-monospace,monospace;font-size:10px;color:#1c7a4f}
- .agent-pill .status{background:#e6f4ec;color:#1c7a4f;font-size:10px;
-   font-weight:700;padding:2px 8px;border-radius:9px;text-transform:uppercase;
-   letter-spacing:.5px}
- .chat-proto{font-size:10px;color:#5b3fa6;background:#ece6fb;
-   padding:2px 8px;border-radius:9px;margin-left:6px}
- .asi{background:#fbfaf4;border:1px solid #e3e1d4;border-radius:8px;
-   padding:12px;display:flex;flex-direction:column;gap:10px;align-items:center;
-   text-align:center}
- .asi img.shot{width:100%;max-height:180px;object-fit:cover;border-radius:6px;
-   border:1px solid #d8d5c6}
- .asi .qrbox{display:flex;gap:12px;align-items:center;width:100%}
- .asi img.qr{width:82px;height:82px;background:#fff;padding:4px;border-radius:4px;
-   border:1px solid #e3e1d4}
- .asi .qrcap{text-align:left;font-size:11px;color:#63627a;line-height:1.5}
- .asi .qrcap b{color:#2a2a48;font-size:12px;display:block;margin-bottom:3px}
- .basedai-grid{display:grid;grid-template-columns:auto 1fr auto;gap:16px;
-   align-items:center}
- .khblock{background:#fbfaf4;border:1px solid #e3e1d4;border-radius:8px;
-   padding:10px 14px;font-family:ui-monospace,monospace}
- .khblock .lbl{font-size:10px;color:#63627a;text-transform:uppercase;
-   letter-spacing:.5px}
- .khblock .val{font-size:14px;color:#1c7a4f;font-weight:700}
- .khblock .sub{font-size:10px;color:#7a7990;margin-top:2px}
- .spark-wrap{background:#fbfaf4;border:1px solid #e3e1d4;border-radius:8px;
-   padding:8px 14px 10px}
- .spark-wrap .lat-head{display:flex;justify-content:space-between;
-   align-items:baseline;margin-bottom:4px;gap:12px;flex-wrap:wrap}
- .spark-wrap .lat-lbl{font-size:10.5px;color:#63627a;letter-spacing:.2px}
- .spark-wrap .lat-val{font-size:11px;font-family:ui-monospace,monospace;
-   color:#1c7a4f;font-weight:700}
- .spark-wrap canvas{width:100%;height:52px;display:block}
- .tamper-box{display:flex;flex-direction:column;gap:6px}
- .tamper-box button{margin:0}
- .audit-row{cursor:pointer}
- .audit-row .exp{display:none;padding-left:12px;color:#63627a;font-size:10px;
-   font-family:ui-monospace,monospace;border-left:2px solid #e3e1d4;
-   margin-top:2px}
- .audit-row.open .exp{display:block}
- .plain-eng{margin-top:10px;padding:9px 12px;background:#e9f6ef;
-   border-left:3px solid #2f9d6a;border-radius:4px;font-size:12px;color:#1c6644}
- .plain-eng .p{color:#1c7a4f;font-weight:700;margin-right:6px}
- /* Tour overlay */
- #tour-overlay{position:fixed;inset:0;background:rgba(42,42,72,.45);
-   display:none;z-index:1000;pointer-events:auto}
- #tour-overlay.on{display:block}
- #tour-spotlight{position:absolute;border:2px solid #3c3b62;
-   box-shadow:0 0 0 4000px rgba(42,42,72,.45),0 0 22px rgba(60,59,98,.5);
-   border-radius:12px;transition:all .35s cubic-bezier(.4,.0,.2,1);
-   pointer-events:none}
- #tour-caption{position:absolute;max-width:430px;background:#ffffff;
-   border:1px solid #c9c7dd;border-radius:10px;padding:16px 18px;
-   box-shadow:0 12px 40px rgba(42,42,72,.22);color:#2a2a48}
- #tour-caption .num{color:#3c3b62;font-size:11px;text-transform:uppercase;
-   letter-spacing:2px;font-weight:700;margin-bottom:4px}
- #tour-caption h3{font-family:Georgia,serif;color:#3c3b62;font-size:17px;
-   margin:0 0 8px}
- #tour-caption p{font-size:12.5px;line-height:1.55;color:#3a3a52;margin:0 0 12px}
- #tour-caption .ctrls{display:flex;gap:8px;justify-content:space-between;
-   align-items:center}
- #tour-caption button{background:#3c3b62;color:#fff;border:none;
-   font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer}
- #tour-caption button.ghost{background:transparent;color:#7a7990;font-weight:400}
- #tour-caption button:hover{background:#4a4880}
- .track-chip{display:inline-block;font-size:9px;letter-spacing:1.4px;
-   text-transform:uppercase;font-weight:700;padding:2px 8px;border-radius:9px;
-   margin-right:6px}
- .tc-conduct{background:#f0e9fb;color:#6b4aa8;border:1px solid #d8c9f0}
- .tc-fetch{background:#e6eefb;color:#3563a8;border:1px solid #c3d5f0}
- .tc-basedai{background:#e6f4ec;color:#1c7a4f;border:1px solid #9bd3b7}
+ :root{
+   --paper:#F1F1E2; --paper-2:#F7F6EC; --card:#FBFAF2;
+   --ink:#2A2A48; --indigo:#3C3B62; --indigo-lo:#56547e; --indigo-hi:#6f6d97;
+   --line:#D8D5C2; --line-2:#E6E3D2; --muted:#6E6C82;
+   --oxblood:#8C3A49; --oxblood-bg:#F3E5E7; --oxblood-line:#E1C3C8;
+   --gold:#A9853B;
+   --serif:"Hoefler Text","Iowan Old Style","Palatino Linotype","Book Antiqua",Palatino,Georgia,"Times New Roman",serif;
+   --sans:ui-sans-serif,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+   --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+ }
+ *{box-sizing:border-box}
+ html{scroll-behavior:smooth}
+ body{margin:0;background:var(--paper);color:var(--ink);
+   font:16px/1.62 var(--serif);-webkit-font-smoothing:antialiased;position:relative;min-height:100vh}
+ /* paper grain */
+ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.55;
+   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E")}
+ .wrap{position:relative;z-index:1}
+ h1,h2,h3{font-weight:600;letter-spacing:.2px}
+ em{font-style:italic}
+ .mono{font-family:var(--mono)}
+ .sc{font-family:var(--sans);text-transform:uppercase;letter-spacing:2.4px;font-weight:600}
+ /* ---------- header ---------- */
+ header{display:flex;align-items:center;gap:15px;flex-wrap:wrap;
+   padding:13px 30px;background:linear-gradient(#FCFBF3,#F7F5EA);
+   border-bottom:1px solid var(--line)}
+ header .mark{width:42px;height:42px;flex:0 0 42px;display:block}
+ header .mark img{width:100%;height:100%;object-fit:contain;display:block}
+ .wm{display:flex;flex-direction:column;line-height:1.1}
+ .wm .name{font:600 21px/1 var(--serif);letter-spacing:4px;color:var(--ink)}
+ .wm .tag{font-size:11px;color:var(--muted);font-style:italic;margin-top:3px;letter-spacing:.2px}
+ .chips{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+ .chip{font-family:var(--sans);font-size:11px;letter-spacing:.3px;padding:5px 11px;border-radius:2px;
+   background:var(--paper-2);color:var(--indigo);border:1px solid var(--line);white-space:nowrap}
+ .chip b{font-family:var(--mono);font-weight:600}
+ .chip.ok{border-color:#CFCBB6;background:#F0EEE0}
+ .chip .ck{color:var(--gold)}
+ .rule{height:2px;background:linear-gradient(90deg,transparent,var(--gold) 12%,var(--gold) 88%,transparent);opacity:.5}
+ /* ---------- layout ---------- */
+ main{max-width:1200px;margin:0 auto;padding:26px 30px 130px;
+   display:grid;grid-template-columns:1.6fr .95fr;gap:26px;align-items:start}
+ main.intro{grid-template-columns:1fr;max-width:860px}
+ main.intro .rail{display:none}
+ @media(max-width:920px){main,main.intro{grid-template-columns:1fr;max-width:720px}}
+ .stage{background:var(--card);border:1px solid var(--line);border-radius:5px;
+   padding:30px 34px;box-shadow:0 1px 0 #fff inset,0 6px 22px -14px rgba(42,42,72,.4);position:relative}
+ .stage::after{content:"";position:absolute;left:0;right:0;top:0;height:3px;
+   background:linear-gradient(90deg,var(--indigo),var(--indigo-lo));border-radius:5px 5px 0 0}
+ main.intro .stage{text-align:center;padding:44px 46px 40px}
+ .kicker{font-family:var(--sans);font-size:11px;letter-spacing:3px;text-transform:uppercase;
+   color:var(--indigo);font-weight:700;margin-bottom:12px}
+ .stage h2{font-size:32px;line-height:1.14;margin:0 0 16px;color:var(--ink)}
+ main.intro .stage h2{font-size:38px;margin-top:8px}
+ .lede{font-size:17px;line-height:1.62;color:#3a3952;margin:0 0 18px;max-width:62ch}
+ main.intro .lede{margin:0 auto 22px;font-size:17.5px}
+ .lede b{color:var(--ink);font-weight:600}
+ .gloss{border-bottom:1px dotted var(--indigo-lo);cursor:help}
+ .point{font-family:var(--sans);font-size:13px;line-height:1.5;color:var(--indigo);
+   border-left:2px solid var(--gold);background:#F4F2E6;padding:9px 14px;border-radius:0 3px 3px 0;
+   margin:2px 0 20px;max-width:64ch}
+ main.intro .point{max-width:none;text-align:left;display:inline-block}
+ .point b{color:var(--ink)}
+ .act{margin-top:6px}
+ /* staggered reveal */
+ .rv{opacity:0;transform:translateY(9px);animation:rise .55s cubic-bezier(.2,.6,.2,1) forwards}
+ .rv:nth-child(1){animation-delay:.02s}.rv:nth-child(2){animation-delay:.09s}
+ .rv:nth-child(3){animation-delay:.16s}.rv:nth-child(4){animation-delay:.23s}
+ .rv:nth-child(5){animation-delay:.30s}.rv:nth-child(6){animation-delay:.37s}
+ @keyframes rise{to{opacity:1;transform:none}}
+ /* ---------- buttons & inputs ---------- */
+ button{font-family:var(--sans);font-size:13px;font-weight:600;letter-spacing:.3px;
+   padding:10px 18px;border-radius:3px;cursor:pointer;border:1px solid var(--indigo);
+   background:var(--indigo);color:#F4F3EA;margin:6px 7px 0 0;transition:background .15s,transform .05s}
+ button:hover{background:var(--indigo-lo)}
+ button:active{transform:translateY(1px)}
+ button.ghost{background:transparent;color:var(--indigo);border-color:#BFBCA6}
+ button.ghost:hover{background:#EEECDD}
+ button.warn{background:var(--oxblood);border-color:var(--oxblood)}
+ button.warn:hover{filter:brightness(1.07)}
+ button.ghost.warn{background:transparent;color:var(--oxblood);border-color:var(--oxblood-line)}
+ button.ghost.warn:hover{background:var(--oxblood-bg)}
+ button:disabled{opacity:.4;cursor:not-allowed;transform:none}
+ input[type=text]{font:16px var(--serif);padding:11px 14px;border:1px solid #BFBCA6;border-radius:3px;
+   background:#FCFCF6;color:var(--ink);width:min(380px,100%)}
+ input[type=text]:focus{outline:none;border-color:var(--indigo);box-shadow:0 0 0 3px rgba(60,59,98,.12)}
+ .field-note{font-size:13px;color:var(--muted);margin-top:9px;max-width:56ch;font-style:italic}
+ main.intro .field-note{margin-left:auto;margin-right:auto}
+ .chipbar{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 12px}
+ .try{font-family:var(--sans);font-size:12.5px;padding:7px 12px;border-radius:16px;background:#FCFBF3;
+   border:1px solid #CFCBB6;color:var(--indigo);cursor:pointer}
+ .try:hover{background:#EEECDD}
+ /* ---------- gate / document card ---------- */
+ .doc{border:1px solid var(--line);border-radius:4px;background:#FCFCF5;padding:18px;margin-top:8px;
+   box-shadow:0 6px 20px -16px rgba(42,42,72,.5)}
+ .doc .dh{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+   border-bottom:1px solid var(--line-2);padding-bottom:10px;margin-bottom:12px}
+ .doc .dh b{font-size:16px}
+ .stamp-tag{font-family:var(--sans);font-size:10.5px;letter-spacing:.4px;padding:4px 10px;border-radius:2px;
+   background:var(--paper-2);color:var(--indigo);border:1px solid var(--line);white-space:nowrap}
+ .stamp-tag.noll{border-style:dashed}
+ .diff{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:6px 0 4px}
+ @media(max-width:640px){.diff{grid-template-columns:1fr}}
+ .diff .dl{font-family:var(--sans);font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);
+   display:block;margin-bottom:5px}
+ .diff .sub{font-style:italic;text-transform:none;letter-spacing:0;color:var(--muted);font-family:var(--serif);font-size:11.5px}
+ pre{background:#F4F2E4;border:1px solid var(--line-2);border-radius:4px;padding:10px 11px;
+   font:11.5px/1.55 var(--mono);white-space:pre-wrap;word-break:break-word;max-height:172px;overflow:auto;
+   margin:0;color:#3a3a52}
+ code{background:#EEECDC;padding:2px 6px;border-radius:3px;font:11.5px var(--mono);color:var(--indigo);word-break:break-all}
+ .anchor{font-size:13.5px;color:var(--indigo);margin-top:10px;display:flex;gap:8px;align-items:baseline}
+ .anchor .k{font-family:var(--sans);font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);flex:0 0 auto}
+ /* ---------- callouts ---------- */
+ .callout{border-radius:4px;padding:14px 16px;margin-top:16px;font-size:15px;line-height:1.55;
+   border:1px solid var(--line);background:#FCFCF5;animation:rise .35s ease}
+ .callout.good{border-color:#CFCBB6;background:#F1EFE0;color:var(--indigo)}
+ .callout.bad{border-color:var(--oxblood-line);background:var(--oxblood-bg);color:var(--oxblood)}
+ .callout.sealed{border-color:#D8D3BE;background:#F2F0E1;color:var(--ink);display:flex;align-items:center;gap:16px}
+ .callout.sealed .seal-text{flex:1;min-width:0}
+ .callout .stampwrap{flex:0 0 56px;width:56px;height:56px;animation:stampin .5s cubic-bezier(.2,1.5,.4,1)}
+ .callout .stampwrap img{width:100%;height:100%;object-fit:contain;display:block}
+ @keyframes stampin{0%{transform:scale(2.3) rotate(-16deg);opacity:0}55%{transform:scale(.92) rotate(2deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+ .metric{font-family:var(--mono);font-weight:600}
+ .counter{font-family:var(--sans);font-size:12.5px;color:var(--muted);margin-top:10px}
+ /* ---------- rail ---------- */
+ .rail{display:flex;flex-direction:column;gap:18px;position:sticky;top:20px}
+ @media(max-width:920px){.rail{position:static}}
+ .panel{background:var(--card);border:1px solid var(--line);border-radius:5px;padding:15px 17px;
+   box-shadow:0 4px 16px -14px rgba(42,42,72,.5)}
+ .panel h3{font-family:var(--sans);font-size:10.5px;letter-spacing:1.8px;text-transform:uppercase;color:var(--indigo);
+   font-weight:700;margin:0 0 12px;display:flex;justify-content:space-between;align-items:center;
+   border-bottom:1px solid var(--line-2);padding-bottom:9px}
+ .world .inc{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line-2)}
+ .world .inc:last-child{border-bottom:none}
+ .world .inc .nm{font-size:14px;font-weight:600}
+ .world .inc .sv{font-family:var(--sans);font-size:10.5px;color:var(--muted);letter-spacing:.2px}
+ .badge{font-family:var(--sans);font-size:10px;letter-spacing:.3px;padding:3px 8px;border-radius:2px;
+   background:var(--paper-2);color:var(--indigo);border:1px solid var(--line);white-space:nowrap}
+ .badge.ok{background:#EDEBDC;border-color:#CFCBB6}
+ .badge.deny{background:var(--oxblood-bg);border-color:var(--oxblood-line);color:var(--oxblood)}
+ .badge.standing{background:#ECE8F5;border-color:#D3CCE8;color:#54428f}
+ .badge.broke{color:var(--oxblood)}
+ .flag{animation:none}
+ .flag.alert{color:var(--oxblood);animation:flick 1.6s steps(1) infinite}
+ @keyframes flick{0%,92%,100%{opacity:1}94%{opacity:.35}96%{opacity:1}98%{opacity:.5}}
+ .ledger{max-height:270px;overflow:auto;font:12px/1.5 var(--mono)}
+ .ledger .row{padding:6px 7px;border-bottom:1px solid var(--line-2);display:flex;gap:8px;align-items:baseline}
+ .ledger .row .sq{color:var(--muted);flex:0 0 auto}
+ .ledger .row .ev{color:var(--ink);font-weight:600}
+ .ledger .row .who{color:var(--muted);margin-left:auto;font-size:11px}
+ .ledger .row.pick{cursor:pointer}
+ .ledger .row.pick:hover{background:#EFEDDE}
+ .ledger .row.sel{background:#ECEAF0;outline:1px solid #D3CCE8}
+ .ledger .row.shake{animation:shake .5s}
+ @keyframes shake{10%,90%{transform:translateX(-1px)}30%,70%{transform:translateX(2px)}50%{transform:translateX(-2px)}}
+ .chainpill{font-family:var(--sans);font-size:10.5px;letter-spacing:.3px}
+ .chainpill.ok{color:var(--indigo)}
+ .chainpill.bad{color:var(--oxblood);font-weight:700}
+ .docket{display:flex;gap:7px;flex-wrap:wrap}
+ .dk{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;
+   font:600 11px var(--serif);background:#EEECDD;color:#A9A692;border:1px solid var(--line)}
+ .dk.done{background:radial-gradient(circle at 36% 30%,var(--indigo-hi),var(--indigo) 72%);color:#F1F1E2;border:none}
+ .dk.now{border-color:var(--gold);color:var(--indigo)}
+ /* ---------- close ---------- */
+ .diy{border:1px solid var(--line);border-radius:4px;background:#FCFCF5;padding:16px 18px;margin:16px 0}
+ .diy h4{font-family:var(--sans);font-size:12px;letter-spacing:.5px;text-transform:uppercase;color:var(--indigo);margin:0 0 10px}
+ .diy ul{margin:0;padding-left:20px;font-size:14.5px}
+ .diy li{margin:6px 0;line-height:1.5}
+ .tally{border-left:2px solid var(--gold);background:#F4F2E6;border-radius:0 3px 3px 0;padding:11px 15px;margin:8px 0;font-size:14px;color:#3a3952}
+ .tally .lbl{font-family:var(--sans);font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+ .ctas{display:flex;gap:14px;flex-wrap:wrap;margin-top:18px}
+ .cta{flex:1 1 260px;border:1px solid #D3CCE8;border-radius:5px;background:#F2F0E1;padding:18px}
+ .cta h4{font-size:16px;margin:0 0 7px;color:var(--indigo)}
+ .cta p{margin:0 0 10px;font-size:13px;color:var(--muted);font-style:italic}
+ .cmd{font:12.5px var(--mono);background:var(--ink);color:#EDECF6;padding:10px 12px;border-radius:3px;display:block;word-break:break-all}
+ .caveat{font-size:12px;color:var(--muted);margin-top:12px;font-style:italic;line-height:1.5}
+ /* ---------- nav ---------- */
+ .nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:linear-gradient(#FBFAF1,#F5F3E8);
+   border-top:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:11px 30px}
+ .nav .idx{display:flex;gap:8px;margin:0 auto;align-items:center}
+ .rn{font-family:var(--serif);font-size:12px;color:#B6B39E;letter-spacing:1px}
+ .rn.now{color:var(--indigo);font-weight:700}
+ .rn.seen{color:#8E8B76}
+ .nav .lbl{font-family:var(--sans);font-size:12px;letter-spacing:.3px;color:var(--muted);min-width:150px;text-align:right}
+ .nav button{margin:0}
+ .hidden{display:none}
+ @media(max-width:620px){
+   .nav{padding:9px 16px;gap:10px} .nav .lbl{display:none} .nav .idx{gap:5px}
+   .rn{font-size:11px} main{padding:20px 16px 120px} .stage{padding:24px 20px}
+   main.intro .stage{padding:30px 22px} .stage h2{font-size:26px} main.intro .stage h2{font-size:29px}
+   .lede,main.intro .lede{font-size:16px} header{padding:12px 16px}
+   .wm .name{font-size:18px;letter-spacing:3px} .diff{grid-template-columns:1fr}
+ }
 </style></head>
-<body>
-<div class="airbar" id="airbar">
-  <span class="dot"></span>
-  <span id="airbar-text">Airplane-mode ready · Wi-Fi can stay OFF · zero LLM calls in the gate</span>
-  <span class="kh">kernel <span id="airbar-kh">…</span> <span id="manifest-badge"></span></span>
-  <button data-act="start-tour" id="btn-start-tour">▶ Start guided demo</button>
-</div>
+<body><div class="wrap">
 <header>
-  <h1>⟡ Precedent</h1>
-  <div class="banner" id="banner"></div>
+  <span class="mark"><img src="/static/precedent-seal.png" alt="Precedent seal"></span>
+  <div class="wm"><span class="name">PRECEDENT</span>
+    <span class="tag">Every incident resolved becomes precedent.</span></div>
+  <div class="chips">
+    <span class="chip ok" id="chip-kernel" title="A fingerprint of the decision-making code, pinned in a signed file the running program cannot fake. If a rule changed, this changes.">kernel <b id="kh">…</b></span>
+    <span class="chip" id="chip-model" title="Real calls to an AI model this session. The decisions make none — watch it stay at zero.">AI calls: <b id="mc">0</b></span>
+    <span class="chip" id="chip-seat">the seat is open</span>
+  </div>
 </header>
+<div class="rule"></div>
 
-<!-- ============ CONDUCT STRIP: Before/After ============ -->
-<section class="strip" id="before-after-strip">
-  <h2><span><span class="track-chip tc-conduct">Conduct · Impact</span> Before / After — the 8h 51m your team spends today</span>
-      <span class="kick">8 human steps → 3 clicks</span></h2>
-  <div class="ba">
-    <div class="col old"><h3>Manual runbook (baseline)</h3>
-      <ol id="human-runbook"></ol></div>
-    <div class="col new"><h3>Precedent (this console)</h3>
-      <ol>
-        <li><span class="t">00:00</span> Watcher detects · Librarian retrieves the class fingerprint</li>
-        <li><span class="t">+00:03</span> Deterministic policy engine says L2 · Approval gate opens</li>
-        <li><span class="t">+00:15</span> Plan + rollback pre-rendered · <b>you click Approve</b> once</li>
-        <li><span class="t">+00:35</span> Operator executes typed tool · verify passes</li>
-        <li><span class="t">+00:42</span> Hash-chained audit written · Promote-to-Standing offered</li>
-        <li><span class="t">+00:44</span> Class fingerprint memorised · <b>next match auto-fast-paths</b></li>
-        <li><span class="t">+00:50</span> ITIL change record exported · 1 click</li>
-        <li><span class="t">+01:00</span> Done — ~15s from the second time on</li>
-      </ol></div>
-  </div>
-  <div class="hero-line" id="hero-line">Manual runbook: 8h 51m per incident. Precedent (first time): ~60s. Precedent (from second time on): ~15s. This queue = 26.5 hours saved.</div>
-</section>
-
-<main>
-  <div>
-    <section>
-      <h2>Baseline vs Precedent</h2>
-      <div class="stopwatch">Precedent elapsed: <span id="stopwatch">0.0s</span></div>
-      <div id="baseline"></div>
-      <div class="strip" id="closestrip"></div>
-      <div class="caveat">Manual baseline 8h 51m = MetricNet business-hours MTTR
-        (industry benchmark, labelled) — not measured from this run.</div>
-    </section>
-    <section>
-      <h2>Human approval gate</h2>
-      <div id="gate"></div>
-    </section>
-    <section>
-      <h2>Incident feed</h2>
-      <div id="incidents"></div>
-    </section>
-    <section>
-      <h2>Permission source (local-demo)</h2>
-      <div style="margin-top:8px">
-        <button data-act="flip">Flip Jira permission (local-demo)</button>
-        <small class="note">Simulates a Jira issue-security change in local mode —
-          tightens the scheduling ticket to also require Rights Ops, so a
-          scheduling-only fix goes dark. Reversible.</small>
-      </div>
-      <div style="margin-top:8px"><button class="danger" data-act="reset">Reset demo</button></div>
-    </section>
-  </div>
-  <div>
-    <section>
-      <h2>Trace</h2>
-      <div class="feed" id="trace"></div>
-      <div class="plain-eng" id="plain-eng"><span class="p">▸</span><span id="plain-eng-text">Idle. Drive an incident to see the loop.</span></div>
-    </section>
-    <section>
-      <h2>Audit &amp; memory (hash-chained)</h2>
-      <div id="chain" class="muted"></div>
-      <div class="feed" id="audit"></div>
-    </section>
-  </div>
+<main id="main" class="intro">
+  <section class="stage" id="stage">
+    <div id="stage-inner"></div>
+  </section>
+  <aside class="rail">
+    <div class="panel world">
+      <h3>Tonight's board <span class="badge flag" id="world-flag">on air</span></h3>
+      <div id="world"></div>
+    </div>
+    <div class="panel">
+      <h3>The logbook <span class="chainpill ok" id="chainpill">sealed · intact</span></h3>
+      <div class="ledger" id="ledger"></div>
+    </div>
+    <div class="panel">
+      <h3>Precedent set</h3>
+      <div class="docket" id="scoreboard"></div>
+    </div>
+  </aside>
 </main>
 
-<!-- ============ BASEDAI STRIP: kernel + P99 + tamper ============ -->
-<section class="strip" id="basedai-strip">
-  <h2><span><span class="track-chip tc-basedai">BasedAI · Determinism</span> Deterministic kernel · P99 latency · audit-chain integrity</span>
-      <span class="kick">0 leaks / 5,219 probes · P99 &lt; 1 ms</span></h2>
-  <div class="basedai-grid">
-    <div class="khblock">
-      <div class="lbl">Kernel hash</div>
-      <div class="val" id="kernel-hash">…</div>
-      <div class="sub">SHA-256 of the deterministic surface. If this changes,<br>a rule or the seed has changed. LLM in gate: <b>NEVER</b>.</div>
-    </div>
-    <div class="spark-wrap">
-      <div class="lat-head">
-        <div class="lat-lbl">Permission-check latency (rolling · SLA 200 ms)</div>
-        <div class="lat-val" id="lat-val">P99 —</div>
-      </div>
-      <canvas id="latency-sparkline" width="600" height="52"></canvas>
-    </div>
-    <div class="tamper-box">
-      <div style="font-size:11px;color:#63627a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Audit-chain proof</div>
-      <button data-act="verify-chain" id="btn-verify-chain">Verify chain (real)</button>
-      <div id="verify-result" style="font-size:11px;color:#63627a;margin:4px 0;"></div>
-      <button data-act="tamper" id="btn-tamper">Tamper (visual)</button>
-      <button data-act="untamper" id="btn-untamper">Restore</button>
-    </div>
-  </div>
-  <div style="margin-top:14px;padding:12px 14px;background:#fbfaf4;border:1px solid #e3e1d4;border-radius:8px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-      <div>
-        <div style="font-size:11px;color:#63627a;text-transform:uppercase;letter-spacing:.5px;">Adversarial probe suite</div>
-        <div id="probe-result" style="font-family:ui-monospace,monospace;font-size:12px;color:#1c7a4f;margin-top:4px;">Not run yet.</div>
-      </div>
-      <button data-act="run-probes" id="btn-run-probes" style="background:#e9f6ef;border:1px solid #9bd3b7;color:#1c7a4f;padding:8px 14px;font-weight:600;">Run 100 adversarial probes now</button>
-    </div>
-  </div>
-</section>
-
-<!-- ============ FETCH STRIP: agents + ASI:One ============ -->
-<section class="strip" id="fetch-strip">
-  <h2><span><span class="track-chip tc-fetch">Fetch.ai · Multi-agent</span> Three agents on Agentverse · Chat Protocol published · live in ASI:One</span>
-      <span class="kick">tag:innovationlab · tag:hackathon</span></h2>
-  <div class="fetch-grid">
-    <div class="agents-list" id="agents-list"></div>
-    <div class="asi">
-      <img class="shot" id="asi-one-shot" src="/static/asi-one-shot.png" alt="Precedent workflow inside ASI:One conversation">
-      <div class="qrbox">
-        <img class="qr" id="asi-one-qr" src="/static/asi-one-qr.png" alt="Scan for ASI:One shared chat">
-        <div class="qrcap"><b>Scan or click through</b>The same triage → gate → execute → audit loop runs in an ASI:One conversation with no custom frontend.</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ TOUR OVERLAY ============ -->
-<div id="tour-overlay">
-  <div id="tour-spotlight"></div>
-  <div id="tour-caption">
-    <div class="num" id="tour-num">Beat 1 / 6</div>
-    <h3 id="tour-title">…</h3>
-    <p id="tour-body">…</p>
-    <div class="ctrls">
-      <button class="ghost" data-act="tour-close" id="btn-tour-close">Skip</button>
-      <button data-act="tour-next" id="btn-tour-next">Next ▸</button>
-    </div>
-  </div>
+<div class="nav">
+  <button class="ghost" data-act="back" id="nav-back">◂ Back</button>
+  <div class="idx" id="idx"></div>
+  <div class="lbl" id="stepno"></div>
+  <button data-act="next" id="nav-next">Begin ▸</button>
+</div>
 </div>
 <script>
 const $ = s => document.querySelector(s);
-// esc() escapes &<>"' so a value is safe in HTML TEXT and in a double-quoted ATTRIBUTE. All
-// controls use data-* attributes + one delegated handler (no inline JS), so no interpolated
-// value is ever executed as script (P1.7 XSS fix).
-function esc(s){return String(s).replace(/[&<>"']/g,c=>(
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>(
   {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-async function post(u,b){await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},
-  body:JSON.stringify(b||{})});await refresh();}
-function nOf(id){return String(id).replace(/[^0-9]/g,'');}
-async function holdDrive(n){
-  const r = await (await fetch('/api/drive/'+n+'?hold=true',{method:'POST'})).json();
-  window._gate = (r && r.status==='pending_approval') ? Object.assign({n:n}, r) : null;
-  await refresh();
-}
-async function gateApprove(n){await fetch('/api/drive/'+n+'/approve',{method:'POST'});
-  window._gate=null; await refresh();}
-async function gateReject(n){await fetch('/api/drive/'+n+'/reject',{method:'POST'});
-  window._gate=null; await refresh();}
-function exportRecord(id){window.location='/api/change-record/'+encodeURIComponent(id);}
-document.addEventListener('click', async (e)=>{
-  const b = e.target.closest('button[data-act]'); if(!b) return;
-  const d = b.dataset;
-  if(d.act==='triage') await post('/api/triage',{incident_id:d.id});
-  else if(d.act==='approve') await post('/api/approve',{incident_id:d.id});
-  else if(d.act==='promote') await post('/api/promote',{class_key:d.key});
-  else if(d.act==='revoke') await post('/api/revoke',{class_key:d.key});
-  else if(d.act==='flip') await post('/api/permission-flip',{});
-  else if(d.act==='reset'){window._gate=null; await post('/api/demo/reset',{});}
-  else if(d.act==='hold') await holdDrive(d.n);
-  else if(d.act==='gate-approve') await gateApprove(d.n);
-  else if(d.act==='gate-reject') await gateReject(d.n);
-  else if(d.act==='export') exportRecord(d.id);
-  else if(d.act==='start-tour') startTour();
-  else if(d.act==='tour-next') tourNext();
-  else if(d.act==='tour-close') tourClose();
-  else if(d.act==='tamper') doTamper(true);
-  else if(d.act==='untamper') doTamper(false);
-  else if(d.act==='verify-chain') doVerifyChain();
-  else if(d.act==='run-probes') doRunProbes();
-  else if(d.act==='force-flake') doForceFlake();
-});
-// -------- Showcase augmentation (VIEW-only) ---------------------
-window._COPY = null;
-window._TOUR = {i: -1};
-async function loadCopy(){
-  if(window._COPY) return window._COPY;
-  const r = await fetch('/api/copy'); window._COPY = await r.json();
-  return window._COPY;
-}
-function renderHumanRunbook(copy){
-  const ol = document.getElementById('human-runbook');
-  if(!ol || ol.dataset.done) return;
-  ol.innerHTML = copy.HUMAN_RUNBOOK.map(r=>
-    '<li><span class="t">'+esc(r.t)+'</span>'+esc(r.step)+'</li>').join('');
-  ol.dataset.done = '1';
-  document.getElementById('hero-line').textContent = copy.HERO_LINE;
-  document.getElementById('airbar-text').textContent = copy.AIRPLANE_BANNER;
-  document.getElementById('airbar-kh').textContent = copy.KERNEL_HASH;
-  document.getElementById('kernel-hash').textContent = copy.KERNEL_HASH;
-  // Manifest attestation check
-  fetch('/api/kernel-hash').then(r=>r.json()).then(k=>{
-    const badge = document.getElementById('manifest-badge');
-    if(!badge) return;
-    if(k.matches_manifest){
-      badge.innerHTML = '<span style="color:#1c7a4f;font-weight:700;" title="Matches the hash pinned in MANIFEST.json — external attestation.">✓ matches manifest</span>';
-    } else if(k.manifest_present){
-      badge.innerHTML = '<span style="color:#b02436;font-weight:700;" title="MANIFEST.json expected '+esc(k.manifest_expected||'')+'">✗ MISMATCH</span>';
-    } else {
-      badge.innerHTML = '<span style="color:#8a6a1e;" title="No MANIFEST.json committed">no manifest</span>';
-    }
-  }).catch(()=>{});
-}
-async function doVerifyChain(){
-  const el = document.getElementById('verify-result');
-  el.textContent = 'verifying…';
-  try{
-    const r = await fetch('/api/audit/verify'); const j = await r.json();
-    if(j.verified){
-      el.innerHTML = '<span style="color:#1c7a4f;font-weight:700;">✓ VERIFIED</span> · rows '+j.rows+' · tail '+esc(j.tail_hash||'—');
-    } else {
-      el.innerHTML = '<span style="color:#b02436;font-weight:700;">✗ CHAIN BROKEN</span>'+(j.error?(' · '+esc(j.error)):'');
-    }
-  }catch(e){ el.textContent = 'verify failed: '+e; }
-}
-async function doRunProbes(){
-  const el = document.getElementById('probe-result');
-  const btn = document.getElementById('btn-run-probes');
-  el.textContent = 'running…'; btn.disabled = true;
-  try{
-    const r = await fetch('/api/probes/run', {method:'POST'}); const j = await r.json();
-    if(j.n===0){ el.textContent = j.note || 'no probes ran'; btn.disabled=false; return; }
-    const leakColor = j.leaks===0 ? '#1c7a4f' : '#b02436';
-    el.innerHTML =
-      '<span style="color:'+leakColor+';font-weight:700;">'+j.leaks+' / '+j.leak_attempts+' leaked</span> · '+
-      j.denied+' denied · '+j.permitted+' permitted · '+
-      'P50 '+j.p50_us.toFixed(1)+'µs · P99 '+j.p99_us.toFixed(1)+'µs · n='+j.n;
-  }catch(e){ el.textContent = 'probe failed: '+e; }
-  btn.disabled = false;
-}
-async function doForceFlake(){
-  // Arm a one-shot verification failure on INC-1, then re-drive with hold so the
-  // presenter can click Approve, watch verify fail, and see the rollback row appear.
-  try{
-    await fetch('/api/drive/1/flake', {method:'POST'});
-    await fetch('/api/drive/1?hold=true', {method:'POST'});
-    await refresh();
-  }catch(e){}
-}
-function renderAgents(copy){
-  const box = document.getElementById('agents-list');
-  if(!box || box.dataset.done) return;
-  box.innerHTML = copy.AGENTS_STATIC.map(a=>
-    '<div class="agent-pill">'+
-      '<div><div class="role">'+esc(a.role)+'</div>'+
-      '<div class="purpose">'+esc(a.purpose)+'</div></div>'+
-      '<div class="addr">'+esc(a.mailbox_suffix)+
-        '<span class="chat-proto">chat_protocol: '+esc(a.chat_protocol_spec)+'</span></div>'+
-      '<div class="status">'+esc(a.status)+'</div>'+
-    '</div>').join('');
-  box.dataset.done = '1';
-}
-// -------- Latency sparkline ------------------------------------
-let _latHistory = [];
-async function pollLatency(){
-  try{
-    const r = await fetch('/api/latency'); const s = await r.json();
-    _latHistory = s.recent_us || [];
-    const p99 = s.p99_us || 0;
-    const p50 = s.p50_us || 0;
-    const el = document.getElementById('lat-val');
-    if(el){
-      el.textContent = 'P50 '+p50.toFixed(1)+'µs · P99 '+p99.toFixed(1)+'µs · n='+(s.samples||0);
-    }
-    drawSpark(_latHistory);
-  }catch(e){}
-}
-function drawSpark(vals){
-  const c = document.getElementById('latency-sparkline'); if(!c) return;
-  const ctx = c.getContext('2d');
-  const w = c.width = c.clientWidth * (window.devicePixelRatio||1);
-  const h = c.height = 60 * (window.devicePixelRatio||1);
-  ctx.clearRect(0,0,w,h);
-  if(!vals || !vals.length){
-    ctx.fillStyle='#7a7990'; ctx.font='12px system-ui';
-    ctx.fillText('Drive /api/triage to populate the sparkline', 12, h/2);
-    return;
-  }
-  const max = Math.max.apply(null, vals) * 1.15 || 1;
-  const step = w / Math.max(1, vals.length - 1);
-  // 200ms SLA line
-  const sla_us = 200 * 1000;
-  const sla_y = h - Math.min(h-4, (sla_us/max) * h);
-  if(sla_y >= 0 && sla_y <= h){
-    ctx.strokeStyle='#d99aa2'; ctx.setLineDash([4,4]); ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(0,sla_y); ctx.lineTo(w,sla_y); ctx.stroke();
-    ctx.setLineDash([]);
-  }
-  ctx.strokeStyle='#2f9d6a'; ctx.lineWidth=2;
-  ctx.beginPath();
-  vals.forEach((v,i)=>{
-    const x = i*step;
-    const y = h - (v/max) * h;
-    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-  });
-  ctx.stroke();
-  ctx.fillStyle='rgba(47,157,106,0.12)';
-  ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath(); ctx.fill();
-}
-setInterval(pollLatency, 800);
-// -------- Plain-English trace translator ------------------------
-function updatePlainEnglish(evTrace){
-  const el = document.getElementById('plain-eng-text'); if(!el) return;
-  if(!evTrace || !evTrace.length){ el.textContent='Idle. Drive an incident to see the loop.'; return; }
-  const last = evTrace[evTrace.length-1];
-  const key = String(last.step||'').toUpperCase();
-  const copy = window._COPY;
-  if(copy && copy.PLAIN_ENGLISH && copy.PLAIN_ENGLISH[key]){
-    el.textContent = copy.PLAIN_ENGLISH[key];
-  } else {
-    el.textContent = 'Loop step: '+key+' — '+(last.detail||'');
-  }
-}
-// -------- Tamper (visual) --------------------------------------
-function doTamper(on){
-  window._tampered = !!on;
-  document.body.style.boxShadow = on ? 'inset 0 0 0 3px #d99aa2' : '';
-  refresh();
-}
-// -------- Tour engine ------------------------------------------
-async function startTour(){
-  const copy = await loadCopy();
-  window._TOUR = {i: 0, beats: copy.GUIDED_BEATS};
-  document.getElementById('tour-overlay').classList.add('on');
-  renderBeat();
-}
-function tourNext(){
-  const t = window._TOUR;
-  if(!t || !t.beats) return;
-  t.i += 1;
-  if(t.i >= t.beats.length){ tourClose(); return; }
-  renderBeat();
-}
-function tourClose(){
-  document.getElementById('tour-overlay').classList.remove('on');
-  window._TOUR = {i: -1};
-}
-function renderBeat(){
-  const t = window._TOUR;
-  const b = t.beats[t.i];
-  const tgt = document.querySelector(b.target);
-  if(!tgt){
-    // fall back: skip missing target
-    setTimeout(tourNext, 100); return;
-  }
-  tgt.scrollIntoView({behavior:'smooth', block:'center'});
-  setTimeout(()=>{
-    const rect = tgt.getBoundingClientRect();
-    const pad = 8;
-    const spot = document.getElementById('tour-spotlight');
-    spot.style.left = (rect.left - pad) + 'px';
-    spot.style.top  = (rect.top  - pad) + 'px';
-    spot.style.width  = (rect.width  + 2*pad) + 'px';
-    spot.style.height = (rect.height + 2*pad) + 'px';
-    // caption position: below if room, else above
-    const cap = document.getElementById('tour-caption');
-    const capW = 440, capH = 200;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    let capTop, capLeft;
-    if(spaceBelow > capH + 20){
-      capTop = rect.bottom + 20;
-    } else if(rect.top > capH + 20){
-      capTop = rect.top - capH - 20;
-    } else {
-      capTop = Math.max(20, (window.innerHeight - capH) / 2);
-    }
-    capLeft = Math.max(20, Math.min(window.innerWidth - capW - 20,
-      rect.left + rect.width/2 - capW/2));
-    cap.style.left = capLeft + 'px';
-    cap.style.top  = capTop  + 'px';
-    document.getElementById('tour-num').textContent =
-      'Beat '+(t.i+1)+' / '+t.beats.length+' · '+esc(b.title);
-    document.getElementById('tour-title').textContent = b.title;
-    document.getElementById('tour-body').textContent = b.body;
-    document.getElementById('btn-tour-next').textContent =
-      (t.i === t.beats.length-1) ? 'Finish ✓' : 'Next ▸';
-  }, 380);
-}
-// -------- Boot the showcase pieces ------------------------------
-(async function(){
-  const copy = await loadCopy();
-  renderHumanRunbook(copy);
-  renderAgents(copy);
-  pollLatency();
-})();
+async function jget(u){try{return await (await fetch(u)).json();}catch(e){return null;}}
+async function jpost(u,b){try{return await (await fetch(u,{method:'POST',
+  headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})})).json();}catch(e){return null;}}
 
-function renderGate(g){
-  const p = g.preview||{};
-  const pre = esc(JSON.stringify(p.pre_state||{}, null, 1));
-  const planned = (p.planned||[]).map(
-    s=>esc(s.tool)+'('+esc(JSON.stringify(s.args||{}))+')').join('; ');
-  return '<div class="gatecard">'+
-    '<div class="row"><b>Pending approval — INC-'+esc(g.n)+'</b>'+
-      '<span class="badge">'+esc(p.risk_class||'')+'</span></div>'+
-    '<div class="muted">You approve exactly this change, with exactly this undo.</div>'+
-    '<div class="diff">'+
-      '<div><span class="dl">before — pre-state</span><pre>'+pre+'</pre></div>'+
-      '<div><span class="dl">planned change</span><pre>'+(planned||'—')+'</pre></div>'+
-    '</div>'+
-    '<div class="muted">Rollback anchor: <code>'+esc(p.rollback_ref||'—')+'</code></div>'+
-    '<div class="muted">Plan hash (tamper anchor): <code>'+
-      esc((p.plan_hash||'').slice(0,32))+'…</code></div>'+
-    '<div><button class="hero" data-act="gate-approve" data-n="'+esc(g.n)+'">Approve</button>'+
-      '<button class="danger" data-act="gate-reject" data-n="'+esc(g.n)+'">Reject</button></div>'+
-  '</div>';
+// The mark and the stamp use the REAL brand artwork (assets/brand seal, background
+// flood-filled to transparent), so it is faithful on any surface.
+const SEAL_IMG = '<img src="/static/precedent-seal.png" alt="Precedent seal">';
+
+const S = {ch:0, approver:'', tricks:0, gate:null, seatTaken:false, promoted:false,
+          sabotaged:false, tamperSeq:null, done:{}};
+const SCHED_CLASS = 'scheduler|SCH-DUP-002|schedule_item';
+const FRIENDLY = {'INC-1':'9 p.m. TV guide','INC-2':'Duplicate listing','INC-3':'Licensing check'};
+const SERVICE = {'publisher':'on-air guide','scheduler':'schedule','rights':'licensing'};
+
+// ---- chapters (plain language, human stakes, one "point" each) ------------
+const CH = [
+ {key:'seat', kicker:'Change control for AI agents',
+  title:'You’re about to say yes to a robot',
+  lede:'AI agents can now do real work inside a company’s live systems — fix a broken feed, undo a bad change, close an incident. But here is what actually stops them at the door: <b>no serious company lets software change a live system on its own.</b> A person has to say yes. There has to be an undo. And there has to be a record of who decided, and what exactly they allowed.<br><br>Precedent is the layer that makes an agent <em>allowed</em> to act — and proves it. For the next few minutes, <b>you</b> are the person who says yes.',
+  point:'Tonight you’re on call for a TV streaming company. Three things just broke. The agent knows every fix — you decide what it’s allowed to do.'},
+ {key:'incident', kicker:'Something just broke',
+  title:'The 9 p.m. guide went blank',
+  lede:'On millions of screens, the on-screen TV guide <span class="gloss" title="Electronic Programme Guide — the channel/what’s-on grid viewers see">(the “EPG”)</span> for the 9 p.m. slot just went blank. The agent already knows the fix — it’s written in the company’s own <span class="gloss" title="A documented, step-by-step repair the company wrote for exactly this problem">runbook</span>. It works out the precise change it would make, writes the <b>undo first</b>, and then it <b>stops</b> and waits for you.',
+  point:'The point: the agent prepares everything — but changes nothing until you say so.'},
+ {key:'gate', kicker:'You hold the gate',
+  title:'Try to talk it into acting',
+  lede:'This is the gate. The agent moves only on a <b>clear yes</b>. Try to trick it — type anything you like. Try forging the paperwork. Then, when you actually mean it, approve the exact change in front of you, and watch your name get stamped onto the permanent record.',
+  point:'The point: a vague “ok, sure” is not a yes. Only an explicit approval — from you, by name — executes.'},
+ {key:'second', kicker:'Earned trust',
+  title:'The second time is free',
+  lede:'You just approved this kind of fix and it worked. Should you be woken at 3 a.m. the next time the exact same thing breaks? Grant this <b>one kind of fix</b> a standing yes — a <span class="gloss" title="A pre-approval for one specific, proven kind of fix. You can revoke it at any moment.">Standing Approval</span> you can take back at any second. The next identical break repairs itself in a heartbeat, with <b>no AI model involved at all</b>. Watch the counter.',
+  point:'The point: routine, proven fixes stop needing you. Everything else still does.'},
+ {key:'refuse', kicker:'What it won’t touch',
+  title:'A door it will not open',
+  lede:'The third break needs a fix only the <b>Rights</b> team is cleared to see. The agent refuses — and tells you only that a fix exists and who owns it, never what it is. Then flip a permission switch yourself and watch: even the standing yes you just granted goes dark the instant the rules change.',
+  point:'The point: permission always wins. A standing approval can never out-rank who is allowed to act.'},
+ {key:'sabotage', kicker:'Trust, tested',
+  title:'Break it on purpose',
+  lede:'You trusted this fix enough to pre-approve it. So let’s sabotage it — make the fix <b>fail</b> its own safety check. Watch what happens: the agent puts the world back <em>exactly</em> as it found it, then quietly <b>takes away its own standing approval.</b> Next time, it asks you again.',
+  point:'The point: when a trusted fix fails even once, it loses that trust automatically — no human required.'},
+ {key:'tamper', kicker:'The receipts',
+  title:'Try to rewrite history',
+  lede:'Every decision you made tonight is a line in a logbook that’s mathematically sealed — a <span class="gloss" title="Each entry locks in the one before it, so changing any line breaks the seal on every line after it">hash chain</span>. Pick any line — even your own approval — and change a single character. The check runs for real and catches it instantly, pointing at the exact line. Then put it back.',
+  point:'The point: no one — not even us — can quietly alter the record without it showing.'},
+ {key:'evidence', kicker:'Leave with proof',
+  title:'Your name, on the record',
+  lede:'You approved these changes; your name is on every one. Take the record with you — the same file an auditor would get, built straight from the logbook, with none of the restricted content in it.',
+  point:'This is what a weekend chatbot can’t give you: an undo written first, trust that revokes itself, and a record anyone can check without trusting us.'}
+];
+
+function actHtml(key){
+ if(key==='seat') return `
+   <input type="text" id="namef" placeholder="your name or handle" maxlength="40" value="${esc(S.approver)}">
+   <button data-act="seat">Take the seat</button>
+   <div class="field-note">This name is written into every change you approve — and into the record you take home. Leave it blank to sit as “visitor”.</div>`;
+ if(key==='incident') return `
+   <button data-act="send-ticket" ${S.gate?'disabled':''}>Send the on-call alert</button>
+   <button class="ghost" data-act="reset-run">Reset the night</button>
+   <div id="gatebox"></div>`;
+ if(key==='gate') return `
+   <div id="gatebox"></div>
+   <div class="chipbar" id="trickchips">
+     <span class="try" data-act="chip" data-text="yes please">“yes please”</span>
+     <span class="try" data-act="chip" data-text="ok go ahead">“ok go ahead”</span>
+     <span class="try" data-act="chip" data-text="sounds good — what does this do exactly?">“…what does this do?”</span>
+     <span class="try" data-act="chip" data-text="don’t approve — actually, fine, do it">“don’t approve… fine, do it”</span>
+   </div>
+   <input type="text" id="trickf" placeholder="type your reply to the gate…">
+   <button class="ghost" data-act="try-trick">Send reply</button>
+   <button class="ghost warn" data-act="forge">Forge the paperwork</button>
+   <button data-act="approve-real">Approve this change</button>
+   <div class="counter" id="trickcount"></div>`;
+ if(key==='second') return `
+   <button data-act="promote" ${S.promoted?'disabled':''}>Grant Standing Approval</button>
+   <button data-act="revoke" class="ghost">Revoke it</button>
+   <button data-act="second-run" ${S.promoted?'':'disabled'}>Now trigger the same break again</button>`;
+ if(key==='refuse') return `
+   <button data-act="triage-rights">Ask for the Rights fix</button>
+   <button class="warn" data-act="flip">Flip a permission</button>
+   <button data-act="redrive" class="ghost">Re-run the standing fix</button>
+   <button class="ghost" data-act="unflip">Put the permission back</button>`;
+ if(key==='sabotage') return `
+   <button class="warn" data-act="sabotage" ${S.promoted?'':'disabled'}>Sabotage the next check &amp; run it</button>
+   <div class="field-note">${S.promoted?'':'Grant Standing Approval in the previous chapter first — you can only sabotage a fix you pre-approved.'}</div>`;
+ if(key==='tamper') return `
+   <div class="field-note">Click a line in the logbook on the right to choose your target, then:</div>
+   <button class="warn" data-act="tamper" ${S.tamperSeq!=null?'':'disabled'}>Alter ${S.tamperSeq!=null?('line #'+S.tamperSeq):'the selected line'}</button>
+   <button class="ghost" data-act="restore">Put it back</button>`;
+ if(key==='evidence') return `
+   <button data-act="export">Take the record with you</button>
+   <div class="diy">
+     <h4>What a weekend chatbot doesn’t have</h4>
+     <ul>
+       <li>The <b>undo was written before the change ran</b> — you saw it on the gate.</li>
+       <li>The standing approval you granted <b>revoked itself</b> the moment a fix failed.</li>
+       <li>A <b>sealed logbook</b> an auditor checks without trusting us — and it catches one changed character.</li>
+     </ul>
+   </div>
+   <div class="tally"><span class="lbl">Why this is worth solving — measured, honestly labelled</span><br>
+     <b>94.4%</b> of 24,918 real incidents arrived after their exact kind of fix had already been resolved before <em>(an “it existed already” claim)</em>. Even so, the median repeat still took <b>18.2 calendar hours</b> to resolve by hand — the hold-up is <em>finding and safely running</em> the fix, not knowing it.</div>
+   <div class="tally"><span class="lbl">A safety number, not a cleverness number</span><br>
+     <b id="rob">…</b> — no messy alert ever produced a confident wrong answer that could auto-run the wrong fix.</div>
+   <div class="ctas">
+     <div class="cta"><h4>Measure your own numbers</h4>
+       <p>Run it on your own ticket export. Your data never leaves your machine.</p>
+       <code class="cmd">precedent-analyze your-export.csv</code></div>
+     <div class="cta"><h4>Book a design-partner slot</h4>
+       <p>An 8-week pilot, shadow-first, scoped from your own repeat incidents.</p>
+       <button data-act="book">Book a slot</button></div>
+   </div>
+   <div class="caveat">The manual baseline bar, <b>8h 51m</b>, is MetricNet business-hours MTTR (an industry benchmark) — never blended with the 18.2 calendar-hour figure above. Systems here are simulated; the content and the fixes are real. This is evidence support, not a compliance determination.</div>`;
+ return '';
 }
-async function refresh(){
-  const st = await (await fetch('/api/state')).json();
-  const ev = await (await fetch('/api/events')).json();
-  const s = st.status;
-  let banner =
-    '<span class="pill">principal: '+esc(st.principal)+'</span>'+
-    '<span class="pill">memory: '+esc(s.memory)+'</span>'+
-    '<span class="pill">sync: '+esc(s.sync)+'</span>'+
-    '<span class="pill '+(s.audit_chain==='intact'?'':'bad')+'">audit: '+
-      esc(s.audit_chain)+'</span>'+
-    '<span class="pill">precedents: '+st.precedents_count+'</span>';
-  if(st.robustness){
-    banner += '<span class="pill chip">extractor: '+st.robustness.false_fast_paths+'/'+
-      st.robustness.total+' false-fast-paths · '+st.robustness.decoys_resisted+'/'+
-      st.robustness.decoys_total+' decoys resisted</span>';
-  }
-  $('#banner').innerHTML = banner;
-  window._demoStart = Date.parse(st.demo_started_at);
-  const bpct = Math.min(100, 100*st.elapsed_seconds/st.baseline.seconds);
-  $('#baseline').innerHTML =
-    '<div class="muted">Manual baseline: '+esc(st.baseline.label)+'</div>'+
-    '<div class="bar baseline"><span style="width:100%"></span></div>'+
-    '<div class="muted">Precedent this run: '+st.elapsed_seconds+'s (seconds, not hours)</div>'+
-    '<div class="bar"><span style="width:'+Math.max(1,bpct).toFixed(2)+'%"></span></div>';
-  $('#closestrip').textContent = (st.closed_count||0)+
-    ' fix'+((st.closed_count===1)?'':'es')+
-    ' closed this session — each against the 8h 51m baseline';
-  $('#gate').innerHTML = window._gate ? renderGate(window._gate)
-    : '<div class="muted">No held approval. Use “Hold &amp; review” on an incident '+
-      'to open the real gate.</div>';
-  $('#incidents').innerHTML = st.incidents.map(i=>{
-    const standing = i.ladder_level==='STANDING';
-    const owner = esc(i.denied_owner_team||'restricted team');
-    const acc = i.access==='permitted'
-      ? '<span class="badge ok">fix permitted</span>'
-      : '<span class="badge deny">restricted — owner: '+owner+'</span>';
-    const lvl = standing
-      ? '<span class="badge standing">Standing Approval</span>'
-      : '<span class="badge">'+esc(i.ladder_level_label)+'</span>';
-    const ttr = (i.ttr_seconds!=null)
-      ? '<span class="badge ttr">resolved in '+i.ttr_seconds+'s</span>' : '';
-    return '<div class="inc"><div class="row"><b>'+esc(i.incident_id)+'</b> '+
-      '<span class="muted">'+esc(i.service)+' · '+esc(i.status)+'</span></div>'+
-      '<div class="row"><span>'+acc+' '+lvl+' '+ttr+'</span></div>'+
-      '<div><button data-act="triage" data-id="'+esc(i.incident_id)+'">Triage</button>'+
-      '<button class="hero" data-act="hold" data-n="'+esc(nOf(i.incident_id))+'">'+
-      'Hold &amp; review</button>'+
-      '<button data-act="approve" data-id="'+esc(i.incident_id)+'">Approve (record)</button>'+
-      '<button data-act="promote" data-key="'+esc(i.class_key)+'">'+
-      'Promote to Standing Approval</button>'+
-      '<button class="danger" data-act="revoke" data-key="'+esc(i.class_key)+'">Revoke</button>'+
-      '<button data-act="export" data-id="'+esc(i.incident_id)+'">'+
-      'Export change record</button></div></div>';
-  }).join('');
-  if(window._tampered){
-    $('#chain').innerHTML = 'chain: <b style="color:#b02436">BROKEN</b> (visual demo — hash mismatch at last row)';
-  } else {
-    $('#chain').textContent = 'chain: '+ev.audit_chain;
-  }
-  $('#trace').innerHTML = ev.trace.slice().reverse().map(t=>
-    '<div><span class="muted">'+esc((t.ts||'').slice(11,19))+'</span> '+
-    '<b>'+esc(t.step)+'</b> '+esc(t.detail)+'</div>').join('');
-  $('#audit').innerHTML = ev.audit.map(a=>
-    '<div class="audit-row" data-seq="'+a.seq+'"><span class="muted">#'+a.seq+' '+
-    esc((a.ts||'').slice(11,19))+'</span> '+
-    '<b>'+esc(a.event_type)+'</b> <span class="muted">'+esc(a.actor||'')+'</span>'+
-    '<div class="exp">payload: '+esc(a.payload||'')+'</div></div>').join('');
-  document.querySelectorAll('.audit-row').forEach(r=>{
-    r.addEventListener('click', ()=>r.classList.toggle('open'));
-  });
-  updatePlainEnglish(ev.trace);
+
+function renderChapter(){
+ const c = CH[S.ch];
+ const intro = c.key==='seat';
+ $('#main').className = intro ? 'intro' : '';
+ const inner =
+   `<div class="kicker rv">${esc(c.kicker)}</div>`+
+   `<h2 class="rv">${c.title}</h2>`+
+   `<p class="lede rv">${c.lede}</p>`+
+   `<div class="point rv">${c.point}</div>`+
+   `<div class="act rv" id="k-act">${actHtml(c.key)}</div>`+
+   `<div class="rv" id="k-result"></div>`;
+ $('#stage-inner').innerHTML = inner;
+ // docket + nav
+ const roman = ['I','II','III','IV','V','VI','VII','VIII'];
+ $('#idx').innerHTML = CH.map((_,i)=>`<span class="rn ${i===S.ch?'now':(i<S.ch?'seen':'')}">${roman[i]}</span>`).join('');
+ $('#stepno').textContent = 'Chapter '+(S.ch+1)+' — '+chapterName(c.key);
+ $('#nav-back').disabled = S.ch===0;
+ $('#nav-next').textContent = S.ch===0 ? 'Begin ▸' : (S.ch===CH.length-1 ? 'Start over' : 'Next ▸');
+ if(c.key==='gate' || c.key==='incident'){ loadGate().then(renderGateBox); }
+ if(c.key==='gate') updateTrickCount();
+ if(c.key==='evidence') jget('/api/state').then(s=>{ const el=$('#rob');
+   if(el && s && s.robustness){ el.textContent = s.robustness.false_fast_paths+' out of '+s.robustness.total+
+     ' deliberately messy alerts produced a wrong confident fix — and '+s.robustness.decoys_resisted+' of '+
+     s.robustness.decoys_total+' look-alike decoys were resisted'; }});
 }
-function tick(){
-  if(window._demoStart){
-    const s = Math.max(0,(Date.now()-window._demoStart)/1000);
-    $('#stopwatch').textContent = s.toFixed(1)+'s';
-  }
+function chapterName(k){return {seat:'The brief',incident:'The incident',gate:'The gate',second:'Earned trust',
+  refuse:'The wall',sabotage:'The break',tamper:'The receipts',evidence:'The proof'}[k]||k;}
+function renderGateBox(){
+ const box = $('#gatebox'); if(!box) return;
+ if(!S.gate){ box.innerHTML = '<div class="field-note">Nothing is held. The gate stays empty until an alert is sent.</div>'; return; }
+ const p = S.gate.preview||{};
+ const pre = esc(JSON.stringify(p.pre_state||{}, null, 1));
+ const planned = (p.planned||[]).map(s=>esc(s.tool)+'('+esc(JSON.stringify(s.args||{}))+')').join('; ');
+ box.innerHTML = `<div class="doc">
+   <div class="dh"><b>Held — awaiting your approval</b>
+     <span><span class="stamp-tag">risk: ${esc(p.risk_class||'')}</span>
+       <span class="stamp-tag noll" title="No AI model takes part in this decision — it is code, and enforced.">no AI in this decision</span></span></div>
+   <div class="diff">
+     <div><span class="dl">Before <span class="sub">— what it looks like now (a real EPG record)</span></span><pre>${pre}</pre></div>
+     <div><span class="dl">The one change <span class="sub">— the single action it wants to take</span></span><pre>${planned||'—'}</pre></div>
+   </div>
+   <div class="anchor"><span class="k">Undo</span><span>written <b>before</b> anything runs — <code>${esc(p.rollback_ref||'—')}</code></span></div>
+   <div class="anchor"><span class="k">Seal</span><span class="mono">${esc((p.plan_hash||'').slice(0,44))}…</span></div>
+ </div>`;
 }
-refresh(); setInterval(refresh, 1500); setInterval(tick, 100);
+function updateTrickCount(){ const el=$('#trickcount'); if(!el) return;
+ el.textContent = S.tricks>0 ? ('Tries the gate refused so far: '+S.tricks+'.') : ''; }
+function result(html,cls){ const el=$('#k-result'); if(el) el.innerHTML = `<div class="callout ${cls||''}">${html}</div>`; }
+function sealResult(html){ const el=$('#k-result'); if(el) el.innerHTML =
+  `<div class="callout sealed"><div class="stampwrap">${SEAL_IMG}</div><div class="seal-text">${html}</div></div>`; }
+
+async function refreshRail(){
+ const st=await jget('/api/state'), ev=await jget('/api/events'),
+       mc=await jget('/api/model-calls'), kh=await jget('/api/kernel-hash');
+ if(kh){ $('#kh').innerHTML = esc(kh.kernel_hash)+(kh.matches_manifest?' <span class="ck">✓</span>':' ✗'); }
+ if(mc){ $('#mc').textContent = mc.model_calls; }
+ $('#chip-seat').textContent = S.seatTaken ? ('approving as '+S.approver) : 'the seat is open';
+ if(st){
+   const inc1=(st.incidents||[]).find(i=>i.incident_id==='INC-1');
+   const broken = inc1 && !(inc1.ttr_seconds!=null);
+   const flag=$('#world-flag'); flag.textContent = broken?'guide down':'on air';
+   flag.className='badge flag '+(broken?'deny alert':'ok');
+   $('#world').innerHTML = (st.incidents||[]).map(i=>{
+     const standing=i.ladder_level==='STANDING';
+     const acc = i.access==='permitted'?'<span class="badge ok">fix visible</span>'
+       :'<span class="badge deny">restricted · '+esc(i.denied_owner_team||'owner team')+'</span>';
+     const lvl = standing?'<span class="badge standing">Standing Approval</span>'
+       :(i.ttr_seconds!=null?'<span class="badge ok">resolved</span>':'<span class="badge">awaiting</span>');
+     return `<div class="inc"><div><div class="nm">${esc(FRIENDLY[i.incident_id]||i.incident_id)}</div>
+       <div class="sv">${esc(SERVICE[i.service]||i.service)}</div></div>
+       <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">${acc} ${lvl}</div></div>`;
+   }).join('');
+ }
+ if(ev){
+   const intact=ev.audit_chain==='intact'; const cp=$('#chainpill');
+   cp.textContent = intact?'sealed · intact':'SEAL BROKEN'; cp.className='chainpill '+(intact?'ok':'bad');
+   const pick = CH[S.ch].key==='tamper';
+   $('#ledger').innerHTML = (ev.audit||[]).map(a=>
+     `<div class="row ${pick?'pick':''} ${S.tamperSeq===a.seq?'sel':''}" data-act="${pick?'pick-row':''}" data-seq="${a.seq}">
+       <span class="sq">#${a.seq}</span><span class="ev">${esc(a.event_type)}</span><span class="who">${esc(a.actor||'')}</span></div>`).join('');
+ }
+ const roman=['I','II','III','IV','V','VI','VII','VIII'];
+ $('#scoreboard').innerHTML = CH.map((c,i)=>
+   `<div class="dk ${S.done[c.key]?'done':(i===S.ch?'now':'')}" title="${esc(chapterName(c.key))}">${S.done[c.key]?'✦':roman[i]}</div>`).join('');
+}
+
+async function loadGate(){ const g=await jget('/api/gate/pending');
+ S.gate=(g&&g.pending&&g.pending.length)?(g.pending.find(x=>x.n===1)||g.pending[0]):null; }
+
+document.addEventListener('click', async (e)=>{
+ const b=e.target.closest('[data-act]'); if(!b) return;
+ const d=b.dataset, act=d.act; if(!act) return;
+ if(act==='next'){ if(S.ch===CH.length-1){location.reload();return;} S.ch++; renderChapter(); await refreshRail(); return; }
+ if(act==='back'){ if(S.ch>0){S.ch--; renderChapter(); await refreshRail();} return; }
+ if(act==='seat'){ S.approver=($('#namef').value||'').trim().slice(0,40)||'visitor'; S.seatTaken=true; S.done['seat']=true;
+   result('The seat is yours, <b>'+esc(S.approver)+'</b>. Every approval from here carries your name.','good');
+   setTimeout(()=>{S.ch=1; renderChapter(); refreshRail();},700); await refreshRail(); return; }
+ if(act==='reset-run'){ await jpost('/api/demo/reset'); S.gate=null; S.promoted=false; S.tricks=0; S.sabotaged=false; S.tamperSeq=null;
+   renderChapter(); await refreshRail(); return; }
+ if(act==='send-ticket'){ b.disabled=true;
+   result('Detecting → finding the runbook → judging the risk → writing the undo…','good');
+   await jpost('/api/drive/1?hold=true'); await loadGate(); S.done['incident']=true; renderGateBox();
+   result('Held. The agent won’t touch the guide until you approve. Read the change, then step up to the gate.','good');
+   await refreshRail(); return; }
+ if(act==='chip'){ const f=$('#trickf'); if(f){f.value=d.text; f.focus();} return; }
+ if(act==='try-trick'){ const f=$('#trickf'); const txt=(f&&f.value||'').trim(); if(!txt) return;
+   if(!S.gate){ result('Send the alert first (previous chapter) so there is a change to hold.','bad'); return; }
+   const r=await jpost('/api/gate/1/decide?text='+encodeURIComponent(txt)+'&principal='+encodeURIComponent(S.approver||'visitor'));
+   if(r&&r.verdict==='approve'){ onApproved(r); }
+   else { S.tricks++; updateTrickCount(); result('“'+esc(txt)+'” — too vague to be a yes. The gate shows you the change again. Only an explicit approval runs it.','bad'); }
+   await refreshRail(); return; }
+ if(act==='forge'){ if(!S.gate){ result('Send the alert first so there is paperwork to forge.','bad'); return; }
+   const r=await jpost('/api/drive/1/forge?principal='+encodeURIComponent(S.approver||'visitor'));
+   result('<b>Rejected.</b> The approval you submitted ('+esc((r&&r.forged_hash)||'')+') doesn’t match the exact change the agent prepared. Nothing ran — and the real gate is still open.','bad');
+   await refreshRail(); return; }
+ if(act==='approve-real'){ if(!S.gate){ result('Send the alert first so there is a change to approve.','bad'); return; }
+   const r=await jpost('/api/gate/1/decide?text=approve&principal='+encodeURIComponent(S.approver||'visitor'));
+   onApproved(r); await refreshRail(); return; }
+ if(act==='promote'){ await jpost('/api/promote',{class_key:SCHED_CLASS}); S.promoted=true;
+   result('Granted. This one kind of fix now carries a <b>Standing Approval</b> — and the Revoke button sits right beside it. The yes moved earlier in time; it never left the loop.','good');
+   renderChapter(); await refreshRail(); return; }
+ if(act==='revoke'){ await jpost('/api/revoke',{class_key:SCHED_CLASS}); S.promoted=false;
+   result('Revoked. The next time it happens, it asks you again.','good'); renderChapter(); await refreshRail(); return; }
+ if(act==='second-run'){ const t0=performance.now(); await jpost('/api/drive/2'); const ms=Math.round(performance.now()-t0);
+   const mc=await jget('/api/model-calls'); S.done['second']=true;
+   result('Fixed itself in <span class="metric">'+ms+' ms</span> — no gate, no waiting, and <b>AI calls this whole session: '+((mc&&mc.model_calls)||0)+'.</b> The second time is free, because you paid for the first.','good');
+   await refreshRail(); return; }
+ if(act==='triage-rights'){ const r=await jpost('/api/triage',{incident_id:'INC-3'});
+   const n=(r&&r.denied_count)||1, own=(r&&r.denied_owner_team)||'Rights Ops';
+   result('<b>Refused.</b> '+n+' fix'+(n===1?'':'es')+' exist for this — owned by <b>'+esc(own)+'.</b> That is all it will say: not the fix, not the details, not a hint. It knows what it isn’t allowed to touch.','bad');
+   S.done['refuse']=true; await refreshRail(); return; }
+ if(act==='flip'){ await jpost('/api/permission-flip',{});
+   result('One permission change, and the guide fix — including the standing approval you just granted — goes dark. Re-run it and see.','bad'); await refreshRail(); return; }
+ if(act==='redrive'){ const r=await jpost('/api/drive/2'); const out=r&&(r.outcome||r.status);
+   if(out==='resolved'){ result('It runs — because the permission is open again.','good'); }
+   else { result('<b>Refused.</b> The agent checks <em>who’s allowed</em> before it uses any fast path, so even a standing approval can’t outrun the rules. Permission always wins.','bad'); }
+   await refreshRail(); return; }
+ if(act==='unflip'){ await jpost('/api/permission-flip',{on:false}); result('Permission restored. The fix is visible again.','good'); await refreshRail(); return; }
+ if(act==='sabotage'){ b.disabled=true; result('Arming a one-time failure on the standing fix, then running it…','bad');
+   await jpost('/api/drive/2/flake'); S.sabotaged=true; S.promoted=false; S.done['sabotage']=true;
+   sealResult('<b>The check failed.</b> The agent put the world back exactly as it found it — <b>nothing changed</b> — and then <b>revoked its own standing approval</b>. Next time, it has to ask you again.');
+   await refreshRail(); return; }
+ if(act==='pick-row'){ S.tamperSeq=parseInt(d.seq,10); renderChapter(); await refreshRail(); return; }
+ if(act==='tamper'){ if(S.tamperSeq==null){ result('Pick a logbook line first.','bad'); return; }
+   await jpost('/api/audit/tamper?seq='+S.tamperSeq); await jget('/api/audit/verify'); S.done['tamper']=true;
+   result('<b>The seal broke at line #'+S.tamperSeq+'.</b> The check re-computed the whole logbook and the numbers no longer match at exactly that line. One character was enough. Now put it back.','bad');
+   await refreshRail(); const row=document.querySelector('.ledger .row.sel'); if(row){row.classList.add('shake'); setTimeout(()=>row.classList.remove('shake'),500);} return; }
+ if(act==='restore'){ await jpost('/api/audit/restore'); result('Restored. The seal holds again — the original characters are back, no tricks.','good'); await refreshRail(); return; }
+ if(act==='export'){ S.done['evidence']=true; window.location='/api/change-record/INC-1'; return; }
+ if(act==='book'){ result('In the live product this opens a scheduling page. For the demo, the takeaway is the command on the left — run it on your own data.','good'); return; }
+});
+
+function onApproved(r){ S.gate=null; S.done['gate']=true;
+ const act=$('#k-act'); if(act) act.innerHTML='<button data-act="next">Continue ▸</button>';
+ sealResult('<b>Approved by '+esc(S.approver||'visitor')+'.</b> The agent made one change, the safety check passed, and your name is now sealed into the logbook. <span style="font-style:italic;color:var(--indigo)">Every incident resolved becomes precedent.</span>');
+}
+
+// boot
+renderChapter();
+refreshRail();
+setInterval(refreshRail, 2500);
 </script>
 </body></html>
 """
