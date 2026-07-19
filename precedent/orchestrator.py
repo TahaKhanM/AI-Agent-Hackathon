@@ -249,8 +249,11 @@ def commit_execution(prepared: Prepared, *, conn, tools, trace=None,
                  f"({outcome.get('detail', 'no detail')}) — treating as verification failure",
                  plan_hash=plan.plan_hash, tool=step.tool)
             break
-    emit("executed", f"{plan.steps[0].tool} on {prepared.ref['object_type']} "
-         f"{prepared.ref['object_id']}", plan_hash=plan.plan_hash)
+    # Only record 'executed' when every step succeeded. Emitting it after an execute_failed
+    # would let the audit log claim a fix ran when it did not (§6 item 1 — honesty-critical).
+    if exec_failed_step is None:
+        emit("executed", f"{plan.steps[0].tool} on {prepared.ref['object_type']} "
+             f"{prepared.ref['object_id']}", plan_hash=plan.plan_hash)
 
     verdict = ({"verified": False} if exec_failed_step
                else tools.verify(ref["service"], ref["object_type"], ref["object_id"]))

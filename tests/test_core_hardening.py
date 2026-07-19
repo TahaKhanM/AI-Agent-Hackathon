@@ -150,6 +150,20 @@ def test_execute_ok_false_rolls_back_and_audits(sim_client, mem, monkeypatch):
                       ).fetchone()["c"]
     assert rows >= 1, "an explicit execute_failed audit row must be written"
 
+    # §6 item 1 — chain consistency: a step reporting ok=false must NEVER be followed by an
+    # 'executed' event for the same plan. The audit log may not record executed-after-failed.
+    ph = prepared.plan.plan_hash
+    executed_after_fail = t1.execute(
+        "SELECT COUNT(*) c FROM audit_log "
+        "WHERE event_type='executed' AND payload LIKE '%' || ? || '%'", (ph,)).fetchone()["c"]
+    assert executed_after_fail == 0, \
+        "no 'executed' row may follow 'execute_failed' for the same plan hash"
+    seq = [r["event_type"] for r in t1.execute(
+        "SELECT event_type FROM audit_log WHERE payload LIKE '%' || ? || '%' ORDER BY seq ASC",
+        (ph,)).fetchall()]
+    assert not ("execute_failed" in seq and "executed" in seq), \
+        "the audit chain must never contain both 'execute_failed' and 'executed' for one plan"
+
 
 # --------------------------------------------------------------------------- #
 # P0.7(c) — the in-process pending map prunes expired holds
