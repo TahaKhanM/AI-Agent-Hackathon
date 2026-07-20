@@ -42,10 +42,13 @@ SURFACES: list[str] = [
 ]
 
 # Surfaces rendered on the public landing / hosted demo are linted with hosted=True (R5:
-# no "offline"/"airplane" copy there). None exist yet — mark them here when they land, e.g.
-# "templates/landing/**/*.html" or "docs/demo/hosted/**/*.md". The airplane-mode demo docs
-# under docs/demo/ are AUTHORING surfaces, NOT hosted, so they may say offline/airplane.
-HOSTED_GLOBS: list[str] = []
+# no "offline"/"airplane" copy there). The airplane-mode demo docs under docs/demo/ are
+# AUTHORING surfaces, NOT hosted, so they may say offline/airplane.
+HOSTED_GLOBS: list[str] = [
+    "console/templates/landing.html",       # WP-LANDING: the public landing '/'
+    "console/templates/security.html",      # WP-LANDING: the seeded security-posture stub
+    "console/static/js/landing.js",         # WP-LANDING: the landing's CTA/funnel bundle
+]
 
 ALLOWLIST_PATH = Path(__file__).resolve().parent / "copy_lint_allowlist.txt"
 

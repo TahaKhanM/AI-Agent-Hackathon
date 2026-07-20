@@ -85,7 +85,7 @@ def _render(browser, base_url: str, width: int, height: int) -> bytes:
                               device_scale_factor=1)
     try:
         page = ctx.new_page()
-        page.goto(base_url + "/", wait_until="load")
+        page.goto(base_url + "/demo", wait_until="load")   # WP-LANDING: demo shell moved to /demo
         page.add_style_tag(content=_KILL_MOTION)
         # Wait until the design system has actually painted its live chips/rail (deterministic
         # for a fresh cold-open session), so the hash reflects the real skin, not a blank shell.

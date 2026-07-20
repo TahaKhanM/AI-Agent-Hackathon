@@ -274,33 +274,12 @@ def api_triage(req: TriageReq, request: Request):
 # --------------------------------------------------------------------------- #
 # Showcase read-only endpoints (VIEW surface only — no logic branches into these)
 # --------------------------------------------------------------------------- #
-@app.get("/api/copy")
-def api_copy():
-    """Static prose bundle for the guided tour + strips. Never fetches at runtime."""
-    return showcase.copy_bundle()
-
-
-@app.get("/api/latency")
-def api_latency(request: Request):
-    """Rolling P50/P99 of REAL permission-check calls. Measurement-only.
-
-    If the ring is empty (first call after boot), run a small benchmark of the live
-    check_access path to seed it — this way the sparkline is populated even before any
-    incident is driven.
-    """
-    sess = _session(request)
-    snap = showcase.latency_snapshot(sess.lat_ring)
-    if snap["samples"] == 0:
-        showcase._bench_permission_check(sess.state.conn, sess.lat_ring, n=200)
-        snap = showcase.latency_snapshot(sess.lat_ring)
-    snap["kernel_hash"] = showcase.KERNEL_HASH
-    return snap
-
-
 @app.get("/api/kernel-hash")
 def api_kernel_hash():
-    """Deterministic-surface fingerprint. Compared against MANIFEST.json for external
-    attestation — a hash pinned in a committed file the running process cannot forge.
+    """Decision-kernel fingerprint — a hash of the files that actually decide (extractor,
+    policy + policy packs, ladder, orchestrator, retrieve, audit). Compared against
+    MANIFEST.json for external attestation: a hash pinned in a committed file the running
+    process cannot forge. Editing VIEW prose or templates does not move it.
     """
     expected = showcase.manifest_expected_hash()
     return {
@@ -488,12 +467,38 @@ def api_change_record(incident_id: str, request: Request):
 
 
 # --------------------------------------------------------------------------- #
-# The page — "The Approver's Seat" (v2 demo). Server-rendered shell + a self-paced,
-# chaptered narrative that drives the REAL kernel at every beat. No frontend framework,
-# no inline handlers (one delegated listener off data-* attributes).
+# WP-LANDING — the public landing shell at '/'. Renders INSTANTLY from the shared design
+# system: every above-the-fold word is server-rendered, and the ONLY external asset is the
+# CI-status badge <img>, fetched lazily by the browser (never a blocking server-side fetch).
+# The two CTAs + the "Verify our claims" strip live in the template; funnel counters fire
+# from console/static/js/landing.js (consent-gated, aggregate, no PII).
 # --------------------------------------------------------------------------- #
 @app.get("/")
 def index(request: Request):
+    # booking_url: gracefully noted in-template when the env var is unset (no broken link).
+    # manifest_hash: the expected kernel fingerprint read from the committed MANIFEST.json —
+    # a local file read, never a network call, so first paint stays instant.
+    return templates.TemplateResponse(request=request, name="landing.html", context={
+        "booking_url": os.environ.get("PRECEDENT_BOOKING_URL") or "",
+        "manifest_hash": showcase.manifest_expected_hash() or "",
+    })
+
+
+@app.get("/security")
+def security(request: Request):
+    """Seeded security-posture stub — real content (dependency surface, no-secrets proof, the
+    one-slim-container argument). The full posture page is P1."""
+    return templates.TemplateResponse(request=request, name="security.html")
+
+
+# --------------------------------------------------------------------------- #
+# The demo — "The Approver's Seat" (v2 demo). Server-rendered shell + a self-paced,
+# chaptered narrative that drives the REAL kernel at every beat. No frontend framework,
+# no inline handlers (one delegated listener off data-* attributes). Relocated from '/'
+# to '/demo' by WP-LANDING (the landing now owns '/').
+# --------------------------------------------------------------------------- #
+@app.get("/demo")
+def demo(request: Request):
     return templates.TemplateResponse(request=request, name="demo.html")
 
 

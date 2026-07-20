@@ -42,7 +42,7 @@ def _normalise(fragment: str) -> str:
 
 def test_rendered_body_matches_golden():
     client = TestClient(app_mod.app)
-    resp = client.get("/")
+    resp = client.get("/demo")   # WP-LANDING: the demo moved off '/' (now the landing) to '/demo'
     assert resp.status_code == 200
 
     golden_body = GOLDEN.read_text()
@@ -55,7 +55,7 @@ def test_rendered_body_matches_golden():
 
 def test_page_wires_external_assets():
     client = TestClient(app_mod.app)
-    html = client.get("/").text
+    html = client.get("/demo").text
 
     head = _HEAD_RE.search(html)
     assert head, "no <head>…</head> found"

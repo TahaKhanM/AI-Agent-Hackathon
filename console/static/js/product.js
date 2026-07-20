@@ -168,6 +168,8 @@
     $('kh').textContent = short(kh, 12);
     const live = $('fz-live'); const eq = $('fz-eq');
     live.textContent = 'live ' + short(kh, 12);
+    // Show the LIVE MANIFEST value (never a hardcoded hash — it drifts every re-scope).
+    $('fz-manifest').textContent = 'MANIFEST.json ' + short(r.body.manifest_expected || '', 12);
     const match = r.body.matches_manifest;
     eq.textContent = match ? '=' : '≠'; eq.className = 'fz-eq ' + (match ? 'ok' : 'bad');
     $('chip-kernel').classList.toggle('ok', !!match);

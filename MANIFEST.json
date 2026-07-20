@@ -1,5 +1,16 @@
 {
-  "kernel_hash_expected": "bf0cfad5fc9e",
-  "note": "Frozen at build time. If /api/kernel-hash disagrees, someone edited the checked-in deterministic surface (guided beats, runbook, plain-english translations, agent identities). The dbs are per-run state and deliberately excluded.",
+  "kernel_hash_expected": "dcfef9750411",
+  "note": "Frozen at build time. Fingerprints the DECISION surface — the files that actually decide what executes: extractor, policy + policy packs, ladder, orchestrator, retrieve, audit. If /api/kernel-hash disagrees, someone edited the decision kernel. VIEW prose, templates and the per-run dbs are deliberately excluded, so editing them never moves the hash.",
+  "kernel_surface_files": [
+    "precedent/extractor.py",
+    "precedent/extractor_robustness.py",
+    "precedent/policy.py",
+    "precedent/policy_pack.yaml",
+    "precedent/policy_pack_actions.yaml",
+    "precedent/ladder.py",
+    "precedent/orchestrator.py",
+    "precedent_memory/retrieve.py",
+    "precedent_memory/audit.py"
+  ],
   "source": "MANIFEST.json (committed) vs console.showcase.compute_kernel_hash()"
 }

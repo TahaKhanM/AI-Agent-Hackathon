@@ -12,7 +12,7 @@
   <div class="wm"><span class="name">PRECEDENT</span>
     <span class="tag">The case file is the product. Take it to your auditor without us in the room.</span></div>
   <div class="chips">
-    <span class="chip ok" id="chip-kernel" title="A fingerprint of the decision-making code, pinned in MANIFEST.json — a committed file the running process cannot forge.">kernel <b id="kh">…</b></span>
+    <span class="chip ok" id="chip-kernel" title="Decision-kernel fingerprint — a hash of the code that actually decides (extractor, policy, ladder, orchestrator, retrieve, audit), pinned in MANIFEST.json which the running process cannot forge.">kernel <b id="kh">…</b></span>
     <button class="chip nollchip" id="chip-noll" aria-expanded="false" aria-controls="noll-pop"
       title="The gate's decide path calls no model. Activate for the proof references + the live counter.">No LLM in this decision <b id="mc">0</b></button>
     <span class="chip" id="chip-verdict">no case selected</span>
@@ -82,7 +82,7 @@
       <!-- Kernel-hash freeze diff (Concept-2 graft) -->
       <div class="freeze" id="freeze">
         <span class="fz-k">kernel freeze</span>
-        <code id="fz-manifest">MANIFEST.json bf0cfad5fc9e</code>
+        <code id="fz-manifest">MANIFEST.json …</code>
         <span class="fz-eq" id="fz-eq">vs</span>
         <code id="fz-live">live …</code>
         <span class="fz-note">disagreement means someone edited the frozen deterministic surface —

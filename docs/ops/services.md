@@ -40,9 +40,13 @@
   `precedent-watcher`, `precedent-librarian`, `precedent-operator`
   (addresses + proofs in [`docs/evidence/LIVE-PROOFS.md`](../evidence/LIVE-PROOFS.md)).
   They run only while the local process runs; the "hosted Watcher" is not deployed.
-- Agent identities derive from `FETCH_AGENT_SEED` — **if unset, the code falls back to a
-  committed dev seed, making the Watcher identity forgeable; set real seeds for anything
-  public** (see `agents/common.resolve_seed`).
+- Agent identities derive from the per-agent seeds `WATCHER_AGENT_SEED`,
+  `LIBRARIAN_AGENT_SEED`, `OPERATOR_AGENT_SEED`. **If a seed is unset in a public context the
+  code now FAILS CLOSED** (refuses rather than deriving a forgeable identity from a committed
+  placeholder); set the real seeds for anything public, or `PRECEDENT_ENV=dev` /
+  `PRECEDENT_AGENTS_OFFLINE=1` for local rehearsal (see `agents/common.resolve_seed`). The
+  rails sender allowlist may pin public addresses via `WATCHER_ADDRESS`, `LIBRARIAN_ADDRESS`,
+  `OPERATOR_ADDRESS` (derivable from the seed, so public — not secret).
 - ASI:One chat API key in `.env` (model `asi1`, verified). The shared-chat link captured
   for the submission is an *invite* link — may expire; re-capture from a fresh session
   if it's needed again.
@@ -56,9 +60,10 @@
 
 | Group | Variables |
 |---|---|
-| Venice | `VENICE_API_KEY`, `VENICE_BASE_URL`, `PRECEDENT_MODEL_BACKEND` (`venice`\|`local`), `PRECEDENT_DEV_MODELS` (never set outside dev) |
+| Venice | `VENICE_API_KEY`, `VENICE_BASE_URL`, `PRECEDENT_MODEL_BACKEND` (`venice`\|`local`), `PRECEDENT_DEV_MODELS` (proprietary escape hatch — refused unless `PRECEDENT_ENV=dev` is ALSO set) |
+| Dev | `PRECEDENT_ENV=dev` (arms dev-only escape hatches: proprietary models + placeholder agent seeds), `PRECEDENT_AGENTS_OFFLINE` (`1` = offline rehearsal, no mailbox) |
 | Jira | `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_PROJECT_KEY`, `JIRA_SERVICE_DESK_ID`, `JIRA_REQUEST_TYPE_ID`, `JIRA_RIGHTS_OPS_ROLE_ID`, `JIRA_SCHEDULING_OPS_ROLE_ID`, `JIRA_*_ACCOUNT_ID` |
-| Fetch | `AGENTVERSE_API_KEY`, `ASI_ONE_API_KEY`, `FETCH_AGENT_MAILBOX_KEY`, `FETCH_AGENT_SEED`, `WATCHER/LIBRARIAN/OPERATOR_AGENT_ADDRESS` |
+| Fetch | `AGENTVERSE_API_KEY`, `ASI_ONE_API_KEY`, `FETCH_AGENT_MAILBOX_KEY`, `WATCHER_AGENT_SEED`, `LIBRARIAN_AGENT_SEED`, `OPERATOR_AGENT_SEED`, `WATCHER_ADDRESS`, `LIBRARIAN_ADDRESS`, `OPERATOR_ADDRESS` |
 | Data | `KAGGLE_USERNAME`, `KAGGLE_KEY` (only to re-fetch source datasets) |
 
 ## Hosted demo (kit recovered onto main, not yet deployed)

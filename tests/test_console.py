@@ -30,7 +30,7 @@ def served_surface(client) -> str:
     """The user-visible demo surface. Post WP-REFACTOR the page shell links an external
     JS bundle (console/static/js/demo.js) that carries the narrative copy, so a copy
     assertion must look at the shell AND the bundle it ships."""
-    html = client.get("/").text
+    html = client.get("/demo").text   # WP-LANDING: the demo shell now lives at '/demo'
     js = client.get("/static/js/demo.js").text
     return html + "\n" + js
 

@@ -50,14 +50,37 @@ ADDRESS_ENV = {
 }
 
 
+def _dev_context() -> bool:
+    """True only in a context where the deterministic dev placeholder seed is SAFE:
+    an explicit ``PRECEDENT_ENV=dev``, or an offline rehearsal / CI run where the mailbox
+    is disabled (``PRECEDENT_AGENTS_OFFLINE=1``) so NO public identity is ever registered.
+    A public rails deployment (mailbox live, no dev flag) is neither — and must never
+    derive its identity from a committed seed."""
+    return os.environ.get("PRECEDENT_ENV") == "dev" or not use_mailbox()
+
+
 def resolve_seed(name: str) -> str:
-    """Stable seed for an agent. Production: the env var in SEED_ENV. Local dev: a
-    deterministic, obviously-non-secret placeholder so the address is still stable
-    across handler swaps (the real address is derived from the env seed)."""
+    """Stable seed for an agent.
+
+    Production: the env var in SEED_ENV (never committed). Dev / offline-rehearsal: a
+    deterministic, obviously-non-secret placeholder so the address stays stable across a
+    handler swap.
+
+    RULE 4 / P0.2 — FAIL CLOSED: if the env seed is unset AND this is a public context
+    (mailbox live, no ``PRECEDENT_ENV=dev``), we REFUSE rather than silently fall back to
+    the committed placeholder — a committed seed would make the Watcher identity forgeable.
+    """
     env = SEED_ENV.get(name)
     if env and os.environ.get(env):
         return os.environ[env]
-    # Local-dev placeholder — NOT a registered secret; documented in agents/README.md.
+    if not _dev_context():
+        raise RuntimeError(
+            f"refusing to derive agent identity from a committed dev seed: {env or 'SEED'} "
+            f"is unset and this is a public context. Set {env or 'the agent seed'} for "
+            f"production, or set PRECEDENT_ENV=dev / PRECEDENT_AGENTS_OFFLINE=1 for local "
+            f"rehearsal (see agents/README.md)."
+        )
+    # Dev/offline placeholder — NOT a registered secret; documented in agents/README.md.
     return f"precedent-{name}-local-dev-seed-set-{env or 'SEED'}-for-production"
 
 

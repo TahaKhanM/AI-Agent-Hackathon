@@ -1,12 +1,19 @@
-# Render Blueprint — one-click always-on hosting for the Precedent demo.
-# In Render: New → Blueprint → connect this GitHub repo → it reads this file.
-# Free plan: reachable 24/7; sleeps after ~15 min idle and cold-starts (~30-60s)
-# on the next visit. No payment card required.
+# Render Blueprint — one-click ALWAYS-ON hosting for the Precedent demo.
+# In Render: New → Blueprint → connect this GitHub repo → it reads this file → click deploy.
+#
+# `plan: starter` is a PAID always-on tier: the instance never sleeps, so there is NO
+# idle cold-start — the first visitor hits a warm process. `/health` is polled by Render's
+# liveness check (and keeps the app warmed). No payment card details live in this file and
+# no secrets are baked in; the founder attaches billing once, in the Render dashboard.
+#
+# (The free tier sleeps after ~15 min idle and cold-starts ~30-60s on the next visit — that
+# is exactly the first-impression cost this always-on tier buys out. Downgrade to `free` only
+# for a throwaway preview.)
 services:
   - type: web
     name: precedent-demo
     runtime: docker
-    plan: free
+    plan: starter        # paid, always-on (no sleep, no idle cold-start)
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     autoDeploy: true
@@ -14,4 +21,4 @@ services:
       # Console listens on all interfaces; Render injects $PORT at runtime.
       - key: PRECEDENT_HOST
         value: 0.0.0.0
-      # No VENICE_API_KEY on purpose → offline/canned mode, no external calls.
+      # No VENICE_API_KEY on purpose → offline/canned mode, no external calls, no secrets.

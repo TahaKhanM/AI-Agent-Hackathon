@@ -65,9 +65,17 @@ LOCAL_MODELS: dict[str, str] = {
     "EMBED": "bge-m3",
 }
 
-# Dev-only proprietary escape hatch — NEVER set in demo/CI. Guards against a closed
-# model silently entering the pipeline.
-ALLOW_PROPRIETARY_DEV = os.environ.get("PRECEDENT_DEV_MODELS") == "unsafe-dev-only"
+# Dev-only proprietary escape hatch — NEVER available in demo/CI. It disables the
+# open-weight guard, so it is deliberately hard to arm: it requires BOTH an explicit opt-in
+# value AND an explicit dev environment. The demo/container path (which never sets
+# PRECEDENT_ENV=dev) therefore CANNOT enable it, even if PRECEDENT_DEV_MODELS leaks in.
+# Evaluated live (not frozen at import) so the guard can never be bypassed by import order.
+def _proprietary_dev_allowed() -> bool:
+    return (
+        os.environ.get("PRECEDENT_DEV_MODELS") == "unsafe-dev-only"
+        and os.environ.get("PRECEDENT_ENV") == "dev"
+    )
+
 
 _ALLOWED_IDS = frozenset(v[0] for v in OPEN_WEIGHT_MODELS.values())
 
@@ -90,7 +98,7 @@ def assert_open_weight(model_ids_from_catalog: dict[str, str | None]) -> None:
     carry a null modelSource (grok-4-3, gemini-3-5-flash, qwen-3-7-plus expose vendor
     doc URLs), so "has a source" is not enough — it must be an HF source.
     """
-    if ALLOW_PROPRIETARY_DEV:  # pragma: no cover - never in demo/CI
+    if _proprietary_dev_allowed():  # pragma: no cover - never in demo/CI
         return
     for role, (mid, _hf, _lic, _notes) in OPEN_WEIGHT_MODELS.items():
         if mid not in model_ids_from_catalog:

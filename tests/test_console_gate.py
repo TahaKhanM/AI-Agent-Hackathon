@@ -127,7 +127,7 @@ def test_state_carries_committed_chip_numbers(demo):
 
 def test_page_has_no_inline_onclick_xss(demo):
     _ds, _console, client = demo
-    page = client.get("/").text
+    page = client.get("/demo").text   # WP-LANDING: demo shell relocated from '/' to '/demo'
     # Post WP-REFACTOR the behaviour lives in an external classic bundle; the XSS and
     # terminology guarantees must hold across the shell AND the bundle it ships.
     js = client.get("/static/js/demo.js").text

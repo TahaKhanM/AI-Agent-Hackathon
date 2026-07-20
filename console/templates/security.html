@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Precedent — Security posture</title>
+<meta name="description" content="Precedent's dependency surface, no-secrets proof, and the one-slim-container argument.">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/precedent.css">
+</head>
+<body><div class="wrap landing">
+<header>
+  <span class="mark"><img src="/static/precedent-seal.png" alt="Precedent seal"></span>
+  <div class="wm"><span class="name">PRECEDENT</span>
+    <span class="tag">Security posture — the small, checkable version.</span></div>
+  <div class="chips">
+    <a class="chip" href="/">◂ Home</a>
+    <a class="chip ok" href="/demo">Start the demo ▸</a>
+  </div>
+</header>
+<div class="rule"></div>
+
+<main class="lp sec">
+  <section class="hero">
+    <p class="kicker">Security posture</p>
+    <h1>A small surface, and everything on it named.</h1>
+    <p class="lede">This is the seeded posture summary — the parts a security reviewer asks for
+      first. It is real content, not a template: the dependency list, the no-secrets proof, and the
+      single-container argument are all drawn from the shipped repository. The full posture page
+      (threat model, data-flow diagram, sub-processor list) is the next milestone.</p>
+  </section>
+
+  <section class="secblock">
+    <h2>1 · Dependency surface</h2>
+    <p>The runtime is ten direct dependencies, each installed from a prebuilt wheel — no compiler in
+      the image, no native build step (<code>numpy</code> and <code>pandas</code> carry compiled
+      extensions; their wheels ship those prebuilt). There is <b>no closed or proprietary model SDK</b> anywhere in
+      the tree: every inference call goes over the Venice OpenAI-compatible HTTP API through
+      <code>httpx</code>, and the only file permitted to name a model is
+      <code>precedent/models.py</code>.</p>
+    <ul class="deps">
+      <li><code>fastapi</code> · <code>uvicorn</code> — the sim + console server</li>
+      <li><code>pydantic</code> — typed message contracts across every boundary</li>
+      <li><code>httpx</code> — the only outbound HTTP client (Venice / Jira)</li>
+      <li><code>python-dotenv</code> — local <code>.env</code> loading</li>
+      <li><code>sse-starlette</code> — the console's server-sent event stream</li>
+      <li><code>jinja2</code> — server-side page rendering</li>
+      <li><code>pandas</code> · <code>numpy</code> — deterministic bench + bitmap ops</li>
+      <li><code>pyyaml</code> — the deterministic policy pack</li>
+    </ul>
+    <p class="note">The Fetch.ai rails, the browser end-to-end harness and the test tooling are all
+      <b>optional extras</b> — the product container installs none of them.</p>
+  </section>
+
+  <section class="secblock">
+    <h2>2 · No secrets, and it is proven</h2>
+    <ul class="checks">
+      <li><b>Nothing committed.</b> <code>.env</code> and <code>.env.*</code> are gitignored; only
+        <code>.env.example</code> — placeholder names, no values — is tracked.</li>
+      <li><b>History-scanned.</b> <code>make secrets-scan</code> runs <code>gitleaks</code> across
+        the full git history on every push; the honesty gate fails closed on any hit.</li>
+      <li><b>No key in the image.</b> No <code>VENICE_API_KEY</code> is baked into the container.
+        With no key present, every model call falls back to a canned rationale — so the hosted demo
+        makes zero outbound model calls and burns no credit.</li>
+      <li><b>No model in the decision.</b> Permission and risk are decided by the deterministic
+        policy engine and a human identity — never by a model — so a leaked inference key could
+        never widen access.</li>
+    </ul>
+  </section>
+
+  <section class="secblock">
+    <h2>3 · One slim container</h2>
+    <p>The whole product ships as a single <code>python:3.13-slim</code> image. It runs the MediaCo
+      simulator bound to loopback only and the console on the public port, in one process group —
+      there is no database service, no message broker, no sidecar to patch. Runtime dependencies are
+      installed in their own layer before the source copy, and the test tree is excluded from the
+      build context, so the installed surface is those ten direct dependencies — with their pinned
+      transitive dependencies — plus the application code.</p>
+    <p class="note">Fail-closed is the default everywhere: when access-list freshness is uncertain,
+      restricted memory is denied rather than served, and a stale cache may only narrow access,
+      never widen it.</p>
+  </section>
+
+  <p class="secfoot"><a class="vlink" href="/#verify">◂ Back to Verify our claims</a></p>
+</main>
+</div>
+</body></html>

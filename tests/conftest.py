@@ -24,6 +24,15 @@ from pathlib import Path
 
 import pytest
 
+# P0.2 — the rails test modules build their agent singletons at IMPORT time (during pytest
+# collection), which calls agents.common.resolve_seed BEFORE any per-test fixture runs. With the
+# fail-closed seed guard, an unset seed in a public context now raises. The test session is an
+# OFFLINE rehearsal (no mailbox is ever opened), so declare that here — before collection — so
+# the import-time build takes the deterministic dev placeholder. Individual tests may still
+# monkeypatch this away (e.g. to assert the public-context refusal). ``setdefault`` respects an
+# explicit outer-environment value.
+os.environ.setdefault("PRECEDENT_AGENTS_OFFLINE", "1")
+
 # Rails test files that import ``agents.*`` (→ uagents) at module import.
 _RAILS_TEST_FILES = [
     "test_fetch_rails.py",

@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Precedent — allowed to act, and proven</title>
+<meta name="description" content="Precedent makes your agent ALLOWED to act — deterministic risk fingerprinting, an earned Standing-Approval ladder, and a pre-generated rollback before every execution.">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/precedent.css">
+</head>
+<body><div class="wrap landing">
+<header>
+  <span class="mark"><img src="/static/precedent-seal.png" alt="Precedent seal"></span>
+  <div class="wm"><span class="name">PRECEDENT</span>
+    <span class="tag">Every incident resolved becomes precedent.</span></div>
+  <div class="chips">
+    <a class="chip ok" href="/demo">Start the demo ▸</a>
+    <a class="chip" href="#verify">Verify our claims</a>
+  </div>
+</header>
+<div class="rule"></div>
+
+<main class="lp">
+  <!-- ---------------------------------------------------------------- hero -->
+  <section class="hero">
+    <p class="kicker">Change control for AI agents</p>
+    <h1 class="pos">Your team built an agent that CAN act. Precedent makes it ALLOWED to act — and proves it.</h1>
+    <p class="lede">Your agent can already open the ticket, flip the flag, restore the record. The
+      question your change-approval board actually asks is a different one: <b>was it allowed, and
+      can you prove it afterwards?</b> Precedent sits in front of the act — it decides, records, and
+      keeps the receipt.</p>
+    <div class="hero-cta">
+      <a class="btn-primary" href="/demo">Start the 3-minute demo</a>
+      <a class="btn-ghost" href="#verify">See the proof, not the pitch</a>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------ three lead planks -->
+  <section class="planks">
+    <article class="plank">
+      <span class="pn">01</span>
+      <h3>It reads the risk before it moves</h3>
+      <p>Every incident is reduced to a <b>fingerprint</b> — the service, the error code and the
+        thing being changed, hashed into one class key. Same fingerprint, same rules, every time.
+        The match is decided by exact fields, never by a model's guess about what looks similar.</p>
+    </article>
+    <article class="plank">
+      <span class="pn">02</span>
+      <h3>Trust is earned, one rung at a time</h3>
+      <p>A fix starts fully supervised and climbs an audited <b>L0 → L3 ladder</b> only after it has
+        proven itself on repeat. The top rung is <b>Standing Approval</b> — a documented, revocable
+        grant for one incident class, never a blanket blank cheque. The revoke control is always
+        one click away.</p>
+    </article>
+    <article class="plank">
+      <span class="pn">03</span>
+      <h3>The undo is written before the do</h3>
+      <p>Before a single change executes, Precedent snapshots the <b>pre-change state</b> and
+        pre-generates its exact <b>inverse</b>. If verification fails, the rollback is already in
+        hand — not improvised after the damage.</p>
+    </article>
+  </section>
+
+  <!-- --------------------------------------------------------- honesty banner -->
+  <section class="honesty">
+    <span class="hb-mark">✦</span>
+    <p>We are honest to a fault. No model sits in a permission or risk decision — the model narrates,
+      the deterministic policy engine disposes. When freshness is uncertain, access is
+      <b>denied, never guessed</b>. Every number we publish carries its source label, and every
+      claim below is one you can check yourself, right now.</p>
+  </section>
+
+  <!-- ---------------------------------------------------------------- two CTAs -->
+  <section class="ctas lp-ctas">
+    <div class="cta">
+      <h4>Measure your own precedent, locally</h4>
+      <p>Point the analyzer at an incident export. It runs on your machine, opens no socket, and
+        writes a self-contained report — <b>your data never leaves your machine</b>.</p>
+      <code class="cmd">precedent-analyze &lt;export.csv&gt;</code>
+      <button data-act="cta-analyzer" class="ghost lp-copy">Copy command</button>
+    </div>
+    <div class="cta">
+      <h4>Walk it through with us</h4>
+      <p>Fifteen minutes on your own change-approval flow — where a Standing-Approval grant would
+        (and would not) fit.</p>
+      {% if booking_url %}
+      <a class="btn-primary lp-book" href="{{ booking_url }}" data-act="cta-book"
+         target="_blank" rel="noopener">Book a slot</a>
+      {% else %}
+      <button data-act="cta-book" class="lp-book">Book a slot</button>
+      <p class="caveat" id="book-note">Scheduling link not configured on this deployment — email
+        <b>hello@precedent</b> and we will send a time.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------- verify our claims strip -->
+  <section id="verify" class="verify">
+    <h2>Verify our claims</h2>
+    <p class="vlede">Nothing here asks you to take our word. Each row is a live artifact you can
+      open in a new tab.</p>
+    <div class="vgrid">
+      <div class="vcard">
+        <span class="vk">Continuous integration</span>
+        <p>Every push runs the full deterministic gate suite with no network and no repository
+          secrets required.</p>
+        <img class="ci-badge" src="https://github.com/TahaKhanM/AI-Agent-Hackathon/actions/workflows/ci.yml/badge.svg"
+             alt="CI status badge" loading="lazy" width="88" height="20">
+      </div>
+      <div class="vcard">
+        <span class="vk">Kernel fingerprint</span>
+        <p>The decision surface is hashed and pinned in a committed file the running process cannot
+          forge. Expected value: <code>{{ manifest_hash }}</code>.</p>
+        <a class="vlink" href="/api/kernel-hash" target="_blank" rel="noopener">GET /api/kernel-hash ▸</a>
+      </div>
+      <div class="vcard">
+        <span class="vk">Signed evidence packs</span>
+        <p>Each resolved incident exports a signed JSON + HTML bundle. Re-verify any byte of it
+          with stdlib alone — it exits non-zero on a single tampered character.</p>
+        <a class="vlink" href="https://github.com/TahaKhanM/AI-Agent-Hackathon/blob/main/verify_pack.py"
+           target="_blank" rel="noopener">verify_pack.py ▸</a>
+      </div>
+      <div class="vcard">
+        <span class="vk">Security posture</span>
+        <p>The dependency surface, the no-secrets proof, and the one-slim-container argument — in
+          full.</p>
+        <a class="vlink" href="/security">Read the posture ▸</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="lp-foot">
+    <span>Precedent</span> · <a href="/demo">Demo</a> · <a href="/console">Case-file console</a> ·
+    <a href="#verify">Verify</a>
+  </footer>
+</main>
+</div>
+<script src="/static/js/landing.js"></script>
+</body></html>
