@@ -75,10 +75,14 @@ def test_two_browser_sessions_are_isolated(browser, live_server):
         assert sb0["status"]["audit_chain"] == "intact"
         assert sb0["closed_count"] == 0
 
-        # A drives the tour in ITS session: tamper the audit chain, promote INC-1's class to
-        # STANDING (fast-path), then resolve INC-1 through the zero-LLM fast path.
+        # A drives the tour in ITS session: tamper the audit chain, EARN then promote INC-1's class
+        # to STANDING (WP-DEMO §b: /api/promote is eligibility-gated — no raw-upsert bypass), then
+        # resolve INC-1 through the zero-LLM fast path.
         assert _post(A, "/api/audit/tamper")["verified"] is False
-        _post(A, "/api/promote", {"class_key": PUBLISHER_CLASS})
+        for _ in range(6):                          # verified recurrences on distinct targets
+            if _post(A, "/api/recur", {"class_key": PUBLISHER_CLASS}).get("eligible"):
+                break
+        assert _post(A, "/api/promote", {"class_key": PUBLISHER_CLASS})["level"] == "STANDING"
         d = _post(A, "/api/drive/1")
         assert d["verified"] is True and d["outcome"] == "resolved"
 

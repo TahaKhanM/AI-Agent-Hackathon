@@ -26,6 +26,7 @@ import os
 import pathlib
 import threading
 
+from precedent import ladder
 from precedent_memory import audit, db, retrieve, store
 from precedent_memory import sync as syncmod
 
@@ -60,9 +61,26 @@ BASELINE_SOURCE_LABEL = "MetricNet business-hours MTTR (industry benchmark, labe
 RIGHTS = ("jira", "issue-security:rights", "Rights Ops")
 SCHED = ("jira", "issue-security:scheduling", "Scheduling Ops")
 
-# INC-2's incident class — pre-promoted to STANDING in the cold-open snapshot so the zero-LLM
-# fast-path fires on stage (see console/session.py memory_template + scripts/demo_reset.py).
+# INC-2's incident class — the GRADUATION class. WP-DEMO §b: it is NO LONGER force-pre-seeded to
+# STANDING at cold open. Instead the cold-open snapshot seeds it at L2 with streak 0, and the
+# visitor earns Standing by driving three recurrences on DISTINCT targets through the REAL ladder
+# (ladder.on_verification_result → eligible on the 3rd → ladder.promote(force=False)). The fast
+# path fires only AFTER the visitor's own promotion. (Name kept for import stability across the
+# suite; other worlds still promote it explicitly to STANDING.)
 SCHED_CLASS_STANDING = "scheduler|SCH-DUP-002|schedule_item"
+
+# The graduation cold-open rung: L2, streak 0. Three DISTINCT verified recurrences take it to the
+# eligibility threshold (ladder._ELIGIBLE_STREAK == 3), never fewer.
+GRADUATION_LEVEL = "L2"
+
+# Genuinely DISTINCT target objects for the graduation recurrences. The ladder anti-gaming window
+# counts an identical (class_key, target_ref) success only ONCE per hour (§5.2), so distinct refs
+# are mandatory for consecutive_verified to advance. The graduation class opens at L2, so its first
+# THREE distinct recurrences reach the eligibility threshold (the demo's "verified 1×→2×→3×"); the
+# extra slots let a class starting lower (L1) also be earned to eligibility in tests without any
+# anti-gaming collapse. Seeded, deterministic.
+GRADUATION_TARGETS = ("schedule_item:SI-7001", "schedule_item:SI-7002", "schedule_item:SI-7003",
+                      "schedule_item:SI-7004", "schedule_item:SI-7005")
 
 # Canonical ladder DATA token vs DISPLAY text (T1 reads the canonical token).
 STANDING = "STANDING"
@@ -161,6 +179,12 @@ class DemoState:
             if self.conn.execute("SELECT 1 FROM class_ladder WHERE class_key=?",
                                  (inc["class_key"],)).fetchone() is None:
                 self._set_ladder(inc["class_key"], "L1", None)
+        # WP-DEMO §b: the GRADUATION class opens at L2, streak 0 — NOT STANDING. The visitor earns
+        # Standing live (three distinct verified recurrences → eligible → ladder.promote). This
+        # REPLACES the retired boot-time force=True STANDING pre-seed (session.py / demo_reset.py).
+        ladder._upsert(self.conn, SCHED_CLASS_STANDING, level=GRADUATION_LEVEL, count=0)
+        self.conn.commit()
+        self._grad_target_idx = 0
         self._trace("system", "seeded local-demo state (systems simulated, content real)")
 
     # ------------------------------------------------------------------ #
@@ -315,26 +339,54 @@ class DemoState:
             self._trace("approval", f"approved by {principal}", incident_id)
             return {"ok": True, "approver": principal}
 
+    def record_recurrence(self, class_key: str | None = None,
+                          target_ref: str | None = None) -> dict:
+        """WP-DEMO §b: run ONE verified recurrence of the graduation class through the REAL ladder.
+
+        Each call advances ``consecutive_verified`` via ``ladder.on_verification_result`` against a
+        DISTINCT seeded target (so the anti-gaming window can't collapse them). The 3rd distinct
+        recurrence lifts the class to the eligibility threshold; ``eligible()`` then lights the
+        visitor's Promote button. No LLM, no raw upsert — this IS the real graduation mechanic."""
+        with self._lock:
+            class_key = class_key or SCHED_CLASS_STANDING
+            if target_ref is None:
+                idx = getattr(self, "_grad_target_idx", 0)
+                target_ref = GRADUATION_TARGETS[idx % len(GRADUATION_TARGETS)]
+                self._grad_target_idx = idx + 1
+            res = ladder.on_verification_result(class_key, True, False, conn=self.conn,
+                                                actor=self.principal, target_ref=target_ref,
+                                                source="sim")
+            self._trace("recurrence",
+                        f"{class_key} verified on {target_ref} → "
+                        f"{res.get('consecutive_verified', '?')}× "
+                        f"(eligible: {res.get('eligible', False)})")
+            return {**res, "target_ref": target_ref,
+                    "eligible": ladder.eligible(class_key, conn=self.conn),
+                    "level": ladder.level_of(self.conn, class_key)}
+
     def promote(self, class_key: str, principal: str | None = None) -> dict:
+        """Human 'Grant Standing Approval'. WP-DEMO §b + the WP-CONSOLE med: routes through the REAL
+        ``ladder.promote(force=False)`` — the raw STANDING upsert bypass is DELETED. Not eligible
+        (< 3 consecutive verified at L2) ⇒ ok=False, NO state change (fail-closed). Eligibility is
+        earned via ``record_recurrence`` on distinct targets, never granted at boot."""
         with self._lock:
             principal = principal or self.principal
-            self._set_ladder(class_key, STANDING, principal)   # canonical token in DB
-            audit.audit("promoted_standing_approval", conn=self.conn, actor=principal,
-                        class_key=class_key, level=STANDING)
-            self.conn.commit()
-            self._trace("promote", f"{class_key} → {LEVEL_LABELS[STANDING]} (by {principal})")
-            return {"ok": True, "class_key": class_key, "level": STANDING,
-                    "level_label": LEVEL_LABELS[STANDING]}
+            result = ladder.promote(class_key, principal, conn=self.conn, force=False)
+            if result.get("ok"):
+                self._trace("promote", f"{class_key} → {LEVEL_LABELS[STANDING]} (by {principal})")
+            else:
+                self._trace("promote_denied",
+                            f"{class_key} not yet eligible for Standing Approval")
+            return {**result, "level_label": level_label(result.get("level", "L1"))}
 
     def revoke(self, class_key: str, principal: str | None = None) -> dict:
+        """Instant revoke → L1. WP-DEMO §b: routes through the REAL ``ladder.demote`` (counter reset
+        to 0, ``class_demoted`` audit event) — no rival ``revoked_standing_approval`` vocabulary."""
         with self._lock:
             principal = principal or self.principal
-            self._set_ladder(class_key, "L1", principal)
-            audit.audit("revoked_standing_approval", conn=self.conn, actor=principal,
-                        class_key=class_key, level="L1")
-            self.conn.commit()
+            result = ladder.demote(class_key, conn=self.conn, reason="revoked", actor=principal)
             self._trace("revoke", f"{class_key} → L1 (revoked by {principal})")
-            return {"ok": True, "class_key": class_key, "level": "L1", "level_label": "L1"}
+            return {**result, "ok": True, "level_label": level_label(result.get("level", "L1"))}
 
     def permission_flip(self, on: bool | None = None) -> dict:
         """LOCAL-DEMO ONLY: simulate a Jira permission change by tightening the

@@ -58,10 +58,16 @@ class _LegacySession:
 
 def _session(request: Request = None):
     """Resolve the world for THIS request: the pinned world in test mode, else the per-cookie
-    session. Direct function calls (no request) in pinned tests land on the legacy world."""
+    session. Direct function calls (no request) in pinned tests land on the legacy world.
+
+    Production path also binds THIS session's model-call counter for the request context, so a
+    slow-path drive's model call increments this visitor's tally — never a process-wide global."""
     if STATE is not None:
         return _LegacySession()
-    return sessionmod.session_from_request(request)
+    sess = sessionmod.session_from_request(request)
+    from precedent import venice
+    venice.bind_session_counter(sess.model_counter)
+    return sess
 
 
 def _auto_approve(principal: str):

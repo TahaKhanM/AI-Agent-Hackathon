@@ -19,8 +19,21 @@ set by the shared ``live_server`` fixture, so the model-call counter stays 0.
 from __future__ import annotations
 
 import pytest
+from playwright.sync_api import expect
 
 pytestmark = pytest.mark.browser
+
+
+def _focus_control(page, selector):
+    """Deterministically focus a control: wait until it is attached, visible AND enabled (a live
+    SSE re-render can briefly detach/replace the node), THEN focus and assert focus via Playwright's
+    auto-retrying ``expect`` — not a one-shot document.activeElement read that races the render."""
+    control = page.locator(selector)
+    expect(control).to_be_visible()
+    expect(control).to_be_enabled()
+    control.focus()
+    expect(control).to_be_focused()
+    return control
 
 # in-page helpers (share the browser's own session cookie — the true end-to-end path)
 _DRIVE_PROPOSE = """async ([iid, principal]) => {
@@ -82,9 +95,7 @@ def test_product_console_e2e(live_server, browser):
         assert "not yet executed" in pivotal.inner_text()
 
         # ---- 2) APPROVE from the keyboard alone (Tab/focus → Enter) --------------------------
-        approve = page.locator('[data-act="approve"]')
-        approve.focus()
-        assert page.evaluate("() => document.activeElement.getAttribute('data-act')") == "approve"
+        _focus_control(page, '[data-act="approve"]')
         page.keyboard.press("Enter")
         page.wait_for_function(
             "() => { const t = document.querySelectorAll('.txtable tr.pick');"
@@ -101,14 +112,20 @@ def test_product_console_e2e(live_server, browser):
         assert _get(page, "/api/model-calls")["model_calls"] == 0            # zero-LLM, live
 
         # ---- 4) REVOKE a Standing class from the keyboard → demotes live, audited/named ------
+        # WP-DEMO §b: the graduation class opens at L2 (no cold-open pre-promote). Earn STANDING on
+        # this session via the REAL ladder (verified recurrences on distinct targets → promote).
+        sched = "scheduler|SCH-DUP-002|schedule_item"
+        for _ in range(4):
+            if _post(page, "/api/recur", {"class_key": sched}).get("eligible"):
+                break
+        assert _post(page, "/api/promote", {"class_key": sched})["level"] == "STANDING"
         r2 = _drive_propose(page, "INC-2")                      # standing fast-path
         assert r2["decision"] == "allow-standing"
         _post(page, "/v1/gate/outcome", {"ref": r2["ref"]})
         _select(page, "INC-2")
-        page.wait_for_selector('[data-act="revoke"]')
-        revoke = page.locator('[data-act="revoke"]')
-        revoke.focus()                                          # reachable by keyboard…
-        assert page.evaluate("() => document.activeElement.getAttribute('data-act')") == "revoke"
+        # Reachable by keyboard — wait for attached/visible/enabled/focused (deterministic; no
+        # activeElement race against the live SSE re-render) before the first activation.
+        revoke = _focus_control(page, '[data-act="revoke"]')
         revoke.press("Enter")                                   # …first activation ARMS (confirm)
         page.wait_for_selector('[data-act="revoke"][data-armed="1"]')
         page.locator('[data-act="revoke"]').press("Enter")      # second activation EXECUTES
@@ -121,9 +138,7 @@ def test_product_console_e2e(live_server, browser):
         assert lad[sched]["level"] == "L1"                      # demoted live
 
         # after the revoke the class is L1 → a keyboard-reachable Promote control now exists
-        page.wait_for_selector('[data-act="promote"]')
-        page.locator('[data-act="promote"]').focus()
-        assert page.evaluate("() => document.activeElement.getAttribute('data-act')") == "promote"
+        _focus_control(page, '[data-act="promote"]')
 
         # ---- 5) an injected verification failure auto-demotes the class live -----------------
         # INC-1's class is at L2 after the earlier verified run; arm a fault, re-drive, approve.

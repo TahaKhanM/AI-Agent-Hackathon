@@ -35,6 +35,18 @@ from precedent_memory import db as memdb
 GATE = "/v1/gate"
 
 
+def _earn_scheduler_standing(c):
+    """WP-DEMO §b: the cold-open template NO LONGER pre-promotes the scheduler class (it opens at
+    L2/streak-0). Earn STANDING on THIS client's per-cookie session (the ladder's force pre-seed
+    path — legitimate test setup) so INC-2 fast-paths to allow-standing on the mounted console."""
+    from console.session import COOKIE_NAME, SESSIONS
+    from precedent import ladder
+    c.get("/api/incidents")  # mint the per-cookie session first
+    sess = SESSIONS.get(c.cookies.get(COOKIE_NAME))
+    with sess.state._lock:
+        ladder.promote(SCHED_CLASS_STANDING, "ops-lead", conn=sess.state.conn, force=True)
+
+
 # --------------------------------------------------------------------------- fixtures
 @pytest.fixture
 def make_gate(tmp_path):
@@ -400,6 +412,7 @@ def test_mounted_on_console_app_end_to_end(tmp_path):
     ref_world.close()
 
     with TestClient(console_app) as c:                     # a real per-cookie session (jar reused)
+        _earn_scheduler_standing(c)                        # WP-DEMO §b: no cold-open pre-promote
         r = c.post("/v1/gate/propose", json=_propose_body(inc2, "scheduling-ops"))
         assert r.status_code == 200, r.text
         assert r.json()["decision"] == "allow-standing"
@@ -422,6 +435,7 @@ def test_mounted_gate_enforces_registered_principals(tmp_path):
     ref_world.close()
 
     with TestClient(console_app) as c:
+        _earn_scheduler_standing(c)                        # WP-DEMO §b: no cold-open pre-promote
         # (a) UNREGISTERED proposer → denied up front (fail-closed).
         deny = c.post("/v1/gate/propose", json=_propose_body(inc2, "mallory")).json()
         assert deny["decision"] == "deny" and deny["reason"] == "unregistered_principal"

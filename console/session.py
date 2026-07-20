@@ -37,7 +37,8 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from console.demo_state import SCHED_CLASS_STANDING, DemoState
+from console.demo_state import DemoState
+from precedent import venice
 from precedent.tools import SimTools
 from sim.factory import make_sim_app
 
@@ -166,8 +167,11 @@ def _copy_sqlite_db(src: str, dst: str) -> None:
 
 
 def memory_template() -> str:
-    """Path to the cold-open MEMORY db template (records + ACLs + principals + ladder, with the
-    scheduler class pre-promoted to STANDING so INC-2 fast-paths). Built once, then copied."""
+    """Path to the cold-open MEMORY db template (records + ACLs + principals + ladder). WP-DEMO §b:
+    the graduation (scheduler) class opens at L2 / streak 0 — NOT STANDING. The boot-time
+    force=True STANDING pre-seed is RETIRED; the visitor earns Standing live through the real
+    ladder, so the zero-LLM fast path fires only AFTER their own promotion. Built once, then copied.
+    """
     global _MEM_TEMPLATE
     with _TEMPLATE_LOCK:
         if _MEM_TEMPLATE and os.path.exists(_MEM_TEMPLATE):
@@ -176,13 +180,12 @@ def memory_template() -> str:
         if committed.exists():
             _MEM_TEMPLATE = str(committed)
             return _MEM_TEMPLATE
-        from precedent import ladder
 
         path = str(_template_dir() / "memory.db")
         _rm_db(path)
-        st = DemoState(db_path=path)  # __init__ -> reset -> _seed (records/ACLs/principals/L1)
-        # Pre-seed the scheduler class at STANDING so the zero-LLM fast-path fires on INC-2.
-        ladder.promote(SCHED_CLASS_STANDING, "ops-lead", conn=st.conn, force=True)
+        # __init__ -> reset -> _seed seeds records/ACLs/principals, all classes at L1, and the
+        # graduation class at L2/streak-0 (console/demo_state._seed). No force-promote here.
+        st = DemoState(db_path=path)
         st.conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")  # fold the WAL into the main file
         st.conn.commit()
         st.conn.close()
@@ -291,6 +294,10 @@ class Session:
         self.pending: dict[str, object] = {}          # was scripts.demo_server._PENDING
         self.tamper_backup: dict[int, str] = {}        # was console.app._TAMPER_BACKUP
         self.lat_ring: deque[int] = deque(maxlen=200)  # was console.showcase._LAT_RING
+        # Per-session model-call tally (was the process-global _MODEL_CALLS in precedent.venice).
+        # The _session resolvers bind this per request so a model call increments THIS visitor's
+        # counter — the §2.6 "model calls THIS session" attestation is now truthful, not a global.
+        self.model_counter = venice.new_call_counter()
 
         # Sim world is built LAZILY (only /api/drive* needs it) so read-only visitors and the
         # DOM/palette tests never pay the sim-load cost.
@@ -335,6 +342,7 @@ class Session:
         self.pending.clear()
         self.tamper_backup.clear()
         self.lat_ring.clear()
+        self.model_counter.reset()   # a fresh cold-open starts THIS session's tally back at 0
         self.reset_sim()
         return snap
 

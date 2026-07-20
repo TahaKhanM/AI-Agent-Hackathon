@@ -96,6 +96,12 @@ def test_two_sessions_isolated_across_both_dbs(app_mod):
     # A drives the tour: Reset, audit-tamper, promote INC-1's class, EPG-repair (execute-in-sim).
     A.post("/api/demo/reset")
     A.post("/api/audit/tamper")                                   # breaks A's audit chain
+    # WP-DEMO §b: /api/promote routes through ladder.promote(force=False) — the raw STANDING-upsert
+    # bypass is deleted. Earn eligibility on A's OWN world first (this mutation must not leak to B).
+    from precedent import ladder
+    with sessA.state._lock:
+        ladder._upsert(sessA.state.conn, PUBLISHER_CLASS, level="L2", count=3)
+        sessA.state.conn.commit()
     A.post("/api/promote", json={"class_key": PUBLISHER_CLASS})   # INC-1 -> STANDING (A only)
     d = A.post("/api/drive/1").json()                             # fast-path repair runs in A's sim
     assert d["verified"] is True and d["outcome"] == "resolved"
@@ -116,6 +122,55 @@ def test_two_sessions_isolated_across_both_dbs(app_mod):
     # B's world was never consumed: B can still drive INC-1 for itself.
     assert B.post("/api/drive/1").json()["verified"] is True
     assert A.get("/api/model-calls").json()["model_calls"] == 0   # airplane path stays at 0
+
+
+# --------------------------------------------------------------------------- #
+# 1a) The §2.6 model-call attestation is genuinely PER-SESSION: two sessions have INDEPENDENT
+#     counters (incrementing one never moves the other), and both are 0 on the airplane path.
+#     Would FAIL under the old process-global _MODEL_CALLS (a call in A would bleed into B).
+# --------------------------------------------------------------------------- #
+def test_model_call_counter_is_per_session(app_mod, monkeypatch):
+    A, B = _client(app_mod), _client(app_mod)
+    sessA = sessionmod.SESSIONS.get(_sid(A))
+    sessB = sessionmod.SESSIONS.get(_sid(B))
+    assert sessA is not None and sessB is not None and sessA.sid != sessB.sid
+
+    # Airplane path: both counters start at 0 (the endpoint reads THIS cookie's session).
+    assert A.get("/api/model-calls").json()["model_calls"] == 0
+    assert B.get("/api/model-calls").json()["model_calls"] == 0
+
+    # Simulate REAL successful model calls landing in A's session context (drive venice._post,
+    # the single seam that increments — with the network faked so the real increment line runs).
+    class _Resp:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"choices": [{"message": {"content": "ok"}}]}
+
+    monkeypatch.setattr(venice.httpx, "post", lambda *a, **k: _Resp())
+
+    # Snapshot the shared process-fallback DELTA (never assert its absolute value — a prior
+    # unbound call or the background sync tick may legitimately have touched it; only OUR two
+    # session-bound calls must leave it untouched).
+    proc_before = venice._PROCESS_COUNTER.value
+    token = venice.bind_session_counter(sessA.model_counter)
+    try:
+        venice._post(venice._endpoint("chat/completions"), {}, timeout=1.0)
+        venice._post(venice._endpoint("chat/completions"), {}, timeout=1.0)
+    finally:
+        venice.unbind_session_counter(token)
+
+    # A's endpoint reflects A's two calls; B is untouched (independent counters).
+    assert A.get("/api/model-calls").json()["model_calls"] == 2
+    assert B.get("/api/model-calls").json()["model_calls"] == 0, "A's calls must NOT bleed into B"
+    assert venice._PROCESS_COUNTER.value == proc_before, \
+        "a session-bound call never touches the process fallback"
+
+    # /api/demo/reset zeroes ONLY the requesting session's tally.
+    A.post("/api/demo/reset")
+    assert A.get("/api/model-calls").json()["model_calls"] == 0
+    assert B.get("/api/model-calls").json()["model_calls"] == 0
 
 
 # --------------------------------------------------------------------------- #

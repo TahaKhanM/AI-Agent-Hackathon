@@ -137,6 +137,12 @@ def test_proposer_cannot_approve_own_proposal(client, bodies):
 # sealed pack + offline verifier + denial-without-leak
 # --------------------------------------------------------------------------- #
 def test_standing_pack_verifies_offline_and_downloads(client, bodies):
+    from precedent import ladder
+    # WP-DEMO §b: the graduation class is no longer STANDING at cold open. Promote it (the ladder's
+    # force pre-seed path — legitimate test setup) so the gate takes the Standing fast path here.
+    sess = _session(client)
+    with sess.state._lock:
+        ladder.promote(SCHED_CLASS_STANDING, "ops-lead", conn=sess.state.conn, force=True)
     r = client.post("/v1/gate/propose", json=_pb(bodies[2], "scheduling-ops")).json()
     assert r["decision"] == "allow-standing"
     client.post("/v1/gate/outcome", json={"ref": r["ref"]})
@@ -195,8 +201,11 @@ def test_ladder_state_served(client):
     lad = client.get("/api/ladder").json()
     keys = {r["class_key"]: r for r in lad["ladder"]}
     assert SCHED_CLASS_STANDING in keys
-    assert keys[SCHED_CLASS_STANDING]["level"] == "STANDING"      # cold-open pre-promoted
-    assert keys[SCHED_CLASS_STANDING]["promoted_by"]             # names the promoter
+    # WP-DEMO §b: the graduation class opens at L2/streak-0 — NOT force-pre-seeded to STANDING.
+    # The visitor earns Standing live through the real ladder.
+    assert keys[SCHED_CLASS_STANDING]["level"] == "L2"
+    assert keys[SCHED_CLASS_STANDING]["consecutive_verified"] == 0
+    assert keys[SCHED_CLASS_STANDING]["is_standing"] is False
     assert lad["standing_label"] == "Standing Approval"          # never "Autonomous"
 
 

@@ -195,3 +195,15 @@
    .lede,main.intro .lede{font-size:16px} header{padding:12px 16px}
    .wm .name{font-size:18px;letter-spacing:3px} .diff{grid-template-columns:1fr}
  }
+
+/* WP-DEMO §d: consent-gated funnel banner (privacy-preserving; default OFF). JS-injected. */
+.consent{position:fixed;left:16px;right:16px;bottom:16px;z-index:50;display:flex;flex-wrap:wrap;
+  gap:10px;align-items:center;justify-content:center;padding:12px 16px;background:var(--card);
+  border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px rgba(42,42,72,.18);
+  font-size:13px;color:var(--ink);max-width:760px;margin:0 auto}
+.consent span{flex:1 1 320px;color:var(--muted)}
+.consent button{font-size:13px;padding:7px 12px}
+/* WP-DEMO §a: presenter-mode state-sanity strip (?presenter=1). JS-injected. */
+.sanity{position:fixed;left:0;right:0;top:0;z-index:60;padding:6px 14px;background:var(--indigo);
+  color:var(--paper);font:600 12px/1.4 var(--mono,monospace);letter-spacing:.3px;text-align:center}
+.sanity b{color:#fff;letter-spacing:1px}

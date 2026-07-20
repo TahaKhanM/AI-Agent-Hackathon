@@ -14,6 +14,18 @@ from console.app import app
 RESTRICTED_FIX_TEXT = "takedown + republish per rights runbook"
 
 
+def _seed_eligibility(client, class_key):
+    """WP-DEMO §b: the raw STANDING-upsert bypass is deleted — /api/promote now routes through
+    ladder.promote(force=False). Seed real eligibility (L2, 3 consecutive verified) on THIS
+    client's per-session world so the promote is a legitimate, earned human click."""
+    from console.session import COOKIE_NAME, SESSIONS
+    from precedent import ladder
+    sess = SESSIONS.get(client.cookies.get(COOKIE_NAME))
+    with sess.state._lock:
+        ladder._upsert(sess.state.conn, class_key, level="L2", count=3)
+        sess.state.conn.commit()
+
+
 def served_surface(client) -> str:
     """The user-visible demo surface. Post WP-REFACTOR the page shell links an external
     JS bundle (console/static/js/demo.js) that carries the narrative copy, so a copy
@@ -58,6 +70,7 @@ def test_approve_records_audit_event(client):
 
 def test_promote_stores_canonical_standing_displays_label(client):
     cls = "publisher|PUB-4012|schedule_item"
+    _seed_eligibility(client, cls)                   # earn eligibility (no more raw-upsert bypass)
     r = client.post("/api/promote", json={"class_key": cls}).json()
     assert r["level"] == "STANDING"                  # canonical DATA token
     assert r["level_label"] == "Standing Approval"   # display text
@@ -79,6 +92,7 @@ def test_class_ladder_row_holds_canonical_token_not_display_text(client):
     # per-session memory db (resolved from its session cookie) to inspect the raw ladder row.
     from console.session import COOKIE_NAME, SESSIONS
     cls = "publisher|PUB-4012|schedule_item"
+    _seed_eligibility(client, cls)                   # earn eligibility (no more raw-upsert bypass)
     client.post("/api/promote", json={"class_key": cls})
     conn = SESSIONS.get(client.cookies.get(COOKIE_NAME)).state.conn
     level = conn.execute("SELECT level FROM class_ladder WHERE class_key=?",

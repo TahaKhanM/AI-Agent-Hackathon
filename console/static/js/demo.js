@@ -9,14 +9,44 @@ async function jpost(u,b){try{return await (await fetch(u,{method:'POST',
 // flood-filled to transparent), so it is faithful on any surface.
 const SEAL_IMG = '<img src="/static/precedent-seal.png" alt="Precedent seal">';
 
+// ---- drive modes (WP-DEMO §a) ---------------------------------------------
+// EXPRESS (~3 min) is the COLD-VISITOR DEFAULT: a curated subset of the SAME chapters, in order
+// hold → approve → graduation → reversal → close. The full 8-chapter tour is behind ?tour=full;
+// presenter mode (?presenter=1) adds a keyboard beat rail, a state-sanity strip and a one-key
+// seed-4207 reset. Forge-the-hash, the permission kill-click and the audit-tamper beat live in the
+// FULL tour ONLY.
+const P = new URLSearchParams(location.search);
+const FULL = P.get('tour') === 'full';
+const PRESENTER = P.get('presenter') === '1';
+const EXPRESS_KEYS = ['seat','incident','gate','second','sabotage','evidence'];
+
 const S = {ch:0, approver:'', tricks:0, gate:null, seatTaken:false, promoted:false,
-          sabotaged:false, tamperSeq:null, done:{}};
+          recur:0, eligible:false, sabotaged:false, tamperSeq:null, done:{}};
 const SCHED_CLASS = 'scheduler|SCH-DUP-002|schedule_item';
+const GRAD_STREAK = 3;   // ladder._ELIGIBLE_STREAK — three distinct verified recurrences
+
+// ---- privacy-preserving funnel (WP-DEMO §d) -------------------------------
+// Anonymous AGGREGATE counts (express-completion, pack-download, CTA-click), CONSENT-GATED and
+// hosted-only. No visitor/session id ever leaves the browser — we send only the event name, and
+// ONLY after the visitor opts in. Consent defaults to OFF and is remembered locally.
+function funnelConsent(){ try{ return localStorage.getItem('precedent_funnel_consent')==='yes'; }catch(e){ return false; } }
+function funnel(event){ if(!funnelConsent()) return; jpost('/api/funnel',{event:event,consent:true}); }
+function setConsent(yes){ try{ localStorage.setItem('precedent_funnel_consent', yes?'yes':'no'); }catch(e){}
+  const el=document.getElementById('consent'); if(el) el.remove(); }
+function initConsent(){
+  try{ if(localStorage.getItem('precedent_funnel_consent')!=null) return; }catch(e){ return; }
+  const bar=document.createElement('div'); bar.id='consent'; bar.className='consent';
+  bar.innerHTML='<span>Count this visit anonymously? We record only that a step happened —'+
+    ' never who you are, never your session. It helps us decide if this demo earns its keep.</span>'+
+    '<button data-act="consent-yes">Allow anonymous counts</button>'+
+    '<button class="ghost" data-act="consent-no">No thanks</button>';
+  document.body.appendChild(bar);
+}
 const FRIENDLY = {'INC-1':'9 p.m. TV guide','INC-2':'Duplicate listing','INC-3':'Licensing check'};
 const SERVICE = {'publisher':'on-air guide','scheduler':'schedule','rights':'licensing'};
 
 // ---- chapters (plain language, human stakes, one "point" each) ------------
-const CH = [
+const CH_ALL = [
  {key:'seat', kicker:'Change control for AI agents',
   title:'You’re about to say yes to a robot',
   lede:'AI agents can now do real work inside a company’s live systems — fix a broken feed, undo a bad change, close an incident. But here is what actually stops them at the door: <b>no serious company lets software change a live system on its own.</b> A person has to say yes. There has to be an undo. And there has to be a record of who decided, and what exactly they allowed.<br><br>Precedent is the layer that makes an agent <em>allowed</em> to act — and proves it. For the next few minutes, <b>you</b> are the person who says yes.',
@@ -51,6 +81,11 @@ const CH = [
   point:'This is what a weekend chatbot can’t give you: an undo written first, trust that revokes itself, and a record anyone can check without trusting us.'}
 ];
 
+// The active chapter set. EXPRESS (default) is a curated, in-order SUBSET of CH_ALL — no new
+// narrative. ?tour=full restores all eight. The choreography (renderChapter, the docket, the
+// nav) is written against CH, so it adapts to whichever set is active.
+const CH = FULL ? CH_ALL : CH_ALL.filter(c => EXPRESS_KEYS.includes(c.key));
+
 function actHtml(key){
  if(key==='seat') return `
    <input type="text" id="namef" placeholder="your name or handle" maxlength="40" value="${esc(S.approver)}">
@@ -70,12 +105,14 @@ function actHtml(key){
    </div>
    <input type="text" id="trickf" placeholder="type your reply to the gate…">
    <button class="ghost" data-act="try-trick">Send reply</button>
-   <button class="ghost warn" data-act="forge">Forge the paperwork</button>
+   ${FULL?'<button class="ghost warn" data-act="forge">Forge the paperwork</button>':''}
    <button data-act="approve-real">Approve this change</button>
    <div class="counter" id="trickcount"></div>`;
  if(key==='second') return `
-   <button data-act="promote" ${S.promoted?'disabled':''}>Grant Standing Approval</button>
-   <button data-act="revoke" class="ghost">Revoke it</button>
+   <button data-act="recur" ${S.promoted||S.eligible?'disabled':''}>Trigger this fix again (verified recurrence)</button>
+   <div class="field-note" id="gradnote">The ladder needs <b>three</b> clean fixes on <b>distinct</b> listings before it will offer a standing yes. Verified so far: <b id="gradx">${S.recur}</b> of ${GRAD_STREAK}.</div>
+   <button data-act="promote" ${S.eligible&&!S.promoted?'':'disabled'}>Grant Standing Approval</button>
+   <button data-act="revoke" class="ghost" ${S.promoted?'':'disabled'}>Revoke it</button>
    <button data-act="second-run" ${S.promoted?'':'disabled'}>Now trigger the same break again</button>`;
  if(key==='refuse') return `
    <button data-act="triage-rights">Ask for the Rights fix</button>
@@ -135,6 +172,8 @@ function renderChapter(){
  $('#nav-next').textContent = S.ch===0 ? 'Begin ▸' : (S.ch===CH.length-1 ? 'Start over' : 'Next ▸');
  if(c.key==='gate' || c.key==='incident'){ loadGate().then(renderGateBox); }
  if(c.key==='gate') updateTrickCount();
+ // The close beat reached => the express arc completed. Anonymous, consent-gated, once per run.
+ if(c.key==='evidence' && !S._expressCounted){ S._expressCounted=true; funnel('express_complete'); }
  if(c.key==='evidence') jget('/api/state').then(s=>{ const el=$('#rob');
    if(el && s && s.robustness){ el.textContent = s.robustness.false_fast_paths+' out of '+s.robustness.total+
      ' deliberately messy alerts produced a wrong confident fix — and '+s.robustness.decoys_resisted+' of '+
@@ -212,8 +251,10 @@ document.addEventListener('click', async (e)=>{
  if(act==='seat'){ S.approver=($('#namef').value||'').trim().slice(0,40)||'visitor'; S.seatTaken=true; S.done['seat']=true;
    result('The seat is yours, <b>'+esc(S.approver)+'</b>. Every approval from here carries your name.','good');
    setTimeout(()=>{S.ch=1; renderChapter(); refreshRail();},700); await refreshRail(); return; }
- if(act==='reset-run'){ await jpost('/api/demo/reset'); S.gate=null; S.promoted=false; S.tricks=0; S.sabotaged=false; S.tamperSeq=null;
+ if(act==='reset-run'){ await jpost('/api/demo/reset'); S.gate=null; S.promoted=false; S.tricks=0; S.sabotaged=false; S.tamperSeq=null; S.recur=0; S.eligible=false;
    renderChapter(); await refreshRail(); return; }
+ if(act==='consent-yes'){ setConsent(true); return; }
+ if(act==='consent-no'){ setConsent(false); return; }
  if(act==='send-ticket'){ b.disabled=true;
    result('Detecting → finding the runbook → judging the risk → writing the undo…','good');
    await jpost('/api/drive/1?hold=true'); await loadGate(); S.done['incident']=true; renderGateBox();
@@ -233,10 +274,17 @@ document.addEventListener('click', async (e)=>{
  if(act==='approve-real'){ if(!S.gate){ result('Send the alert first so there is a change to approve.','bad'); return; }
    const r=await jpost('/api/gate/1/decide?text=approve&principal='+encodeURIComponent(S.approver||'visitor'));
    onApproved(r); await refreshRail(); return; }
- if(act==='promote'){ await jpost('/api/promote',{class_key:SCHED_CLASS}); S.promoted=true;
-   result('Granted. This one kind of fix now carries a <b>Standing Approval</b> — and the Revoke button sits right beside it. The yes moved earlier in time; it never left the loop.','good');
+ if(act==='recur'){ b.disabled=true; const r=await jpost('/api/recur',{class_key:SCHED_CLASS});
+   S.recur=(r&&r.consecutive_verified!=null)?r.consecutive_verified:(S.recur+1); S.eligible=!!(r&&r.eligible);
+   if(S.eligible){ result('Three clean fixes on three <b>distinct</b> listings. The ladder now offers a standing yes — <b>you</b> decide whether to take it.','good'); }
+   else { result('Verified fix #'+S.recur+' on a distinct listing. '+(GRAD_STREAK-S.recur)+' more to go — same-listing repeats don’t count.','good'); }
    renderChapter(); await refreshRail(); return; }
- if(act==='revoke'){ await jpost('/api/revoke',{class_key:SCHED_CLASS}); S.promoted=false;
+ if(act==='promote'){ const r=await jpost('/api/promote',{class_key:SCHED_CLASS});
+   if(!r||r.ok===false){ result('Not yet. The ladder only grants a standing yes after <b>three</b> verified fixes on distinct listings — this is the real gate, not a demo shortcut.','bad'); await refreshRail(); return; }
+   S.promoted=true;
+   result('Granted. This one kind of fix now carries a <b>Standing Approval</b> — you earned it with three verified fixes, and the Revoke button sits right beside it. The yes moved earlier in time; it never left the loop.','good');
+   renderChapter(); await refreshRail(); return; }
+ if(act==='revoke'){ await jpost('/api/revoke',{class_key:SCHED_CLASS}); S.promoted=false; S.eligible=false; S.recur=0;
    result('Revoked. The next time it happens, it asks you again.','good'); renderChapter(); await refreshRail(); return; }
  if(act==='second-run'){ const t0=performance.now(); await jpost('/api/drive/2'); const ms=Math.round(performance.now()-t0);
    const mc=await jget('/api/model-calls'); S.done['second']=true;
@@ -254,7 +302,7 @@ document.addEventListener('click', async (e)=>{
    await refreshRail(); return; }
  if(act==='unflip'){ await jpost('/api/permission-flip',{on:false}); result('Permission restored. The fix is visible again.','good'); await refreshRail(); return; }
  if(act==='sabotage'){ b.disabled=true; result('Arming a one-time failure on the standing fix, then running it…','bad');
-   await jpost('/api/drive/2/flake'); S.sabotaged=true; S.promoted=false; S.done['sabotage']=true;
+   await jpost('/api/drive/2/flake'); S.sabotaged=true; S.promoted=false; S.eligible=false; S.recur=0; S.done['sabotage']=true;
    sealResult('<b>The check failed.</b> The agent put the world back exactly as it found it — <b>nothing changed</b> — and then <b>revoked its own standing approval</b>. Next time, it has to ask you again.');
    await refreshRail(); return; }
  if(act==='pick-row'){ S.tamperSeq=parseInt(d.seq,10); renderChapter(); await refreshRail(); return; }
@@ -263,8 +311,8 @@ document.addEventListener('click', async (e)=>{
    result('<b>The seal broke at line #'+S.tamperSeq+'.</b> The check re-computed the whole logbook and the numbers no longer match at exactly that line. One character was enough. Now put it back.','bad');
    await refreshRail(); const row=document.querySelector('.ledger .row.sel'); if(row){row.classList.add('shake'); setTimeout(()=>row.classList.remove('shake'),500);} return; }
  if(act==='restore'){ await jpost('/api/audit/restore'); result('Restored. The seal holds again — the original characters are back, no tricks.','good'); await refreshRail(); return; }
- if(act==='export'){ S.done['evidence']=true; window.location='/api/change-record/INC-1'; return; }
- if(act==='book'){ result('In the live product this opens a scheduling page. For the demo, the takeaway is the command on the left — run it on your own data.','good'); return; }
+ if(act==='export'){ S.done['evidence']=true; funnel('pack_download'); window.location='/api/change-record/INC-1'; return; }
+ if(act==='book'){ funnel('cta_click'); result('In the live product this opens a scheduling page. For the demo, the takeaway is the command on the left — run it on your own data.','good'); return; }
 });
 
 function onApproved(r){ S.gate=null; S.done['gate']=true;
@@ -272,7 +320,51 @@ function onApproved(r){ S.gate=null; S.done['gate']=true;
  sealResult('<b>Approved by '+esc(S.approver||'visitor')+'.</b> The agent made one change, the safety check passed, and your name is now sealed into the logbook. <span style="font-style:italic;color:var(--indigo)">Every incident resolved becomes precedent.</span>');
 }
 
+// ---- rail updates: REAL SSE, with a truthful polling fallback (WP-DEMO §c) ----------------
+// The unconditional setInterval poll is retired. The rail refreshes on server-sent 'rail' events;
+// if the stream can't open or drops, we fall back to polling the REAL /api/state — a dropped
+// stream fails toward the true current state, never a spinner that lies.
+let _pollTimer=null;
+function startPolling(){ if(_pollTimer) return; _pollTimer=setInterval(refreshRail, 2500); }
+function stopPolling(){ if(_pollTimer){ clearInterval(_pollTimer); _pollTimer=null; } }
+function startRail(){
+  if(typeof EventSource==='undefined'){ startPolling(); return; }
+  let opened=false;
+  let es;
+  try{ es=new EventSource('/api/stream'); }
+  catch(e){ startPolling(); return; }
+  es.addEventListener('rail', ()=>{ stopPolling(); refreshRail(); });
+  es.onopen=()=>{ opened=true; stopPolling(); };
+  es.onerror=()=>{ startPolling(); };   // reconnect is automatic; poll meanwhile toward the truth
+  // If the stream never opens (proxy/host without SSE), fall back so the rail is never frozen.
+  setTimeout(()=>{ if(!opened) startPolling(); }, 4000);
+}
+
+// ---- presenter mode: keyboard beat rail + state-sanity strip + one-key seed-4207 reset -------
+function initPresenter(){
+  if(!PRESENTER) return;
+  const strip=document.createElement('div'); strip.id='sanity'; strip.className='sanity';
+  document.body.appendChild(strip);
+  const paint=async()=>{ const st=await jget('/api/state'), mc=await jget('/api/model-calls');
+    const sched=(st&&st.incidents||[]).find(i=>i.class_key===SCHED_CLASS)||{};
+    strip.innerHTML='<b>presenter</b> · beat '+(S.ch+1)+'/'+CH.length+
+      ' · ladder(sched): '+esc(sched.ladder_level||'?')+
+      ' · verified: '+S.recur+'/'+GRAD_STREAK+
+      ' · promoted: '+(S.promoted?'yes':'no')+
+      ' · AI calls: '+((mc&&mc.model_calls)||0); };
+  paint(); setInterval(paint, 1500);
+  document.addEventListener('keydown', (e)=>{
+    if(e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+    if(e.key>='1' && e.key<=String(CH.length)){ S.ch=parseInt(e.key,10)-1; renderChapter(); refreshRail(); }
+    else if(e.key==='ArrowRight'){ if(S.ch<CH.length-1){S.ch++; renderChapter(); refreshRail();} }
+    else if(e.key==='ArrowLeft'){ if(S.ch>0){S.ch--; renderChapter(); refreshRail();} }
+    else if(e.key==='r' || e.key==='R'){ jpost('/api/demo/reset').then(()=>{ S.gate=null; S.promoted=false; S.eligible=false; S.recur=0; S.tricks=0; S.sabotaged=false; S.tamperSeq=null; renderChapter(); refreshRail(); }); }
+  });
+}
+
 // boot
+initConsent();
+initPresenter();
 renderChapter();
 refreshRail();
-setInterval(refreshRail, 2500);
+startRail();

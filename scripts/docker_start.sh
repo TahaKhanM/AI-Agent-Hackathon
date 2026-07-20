@@ -10,8 +10,9 @@ export PRECEDENT_CONSOLE_PORT="${PORT:-8000}"
 # sys.path[0] = scripts/.
 export PYTHONPATH="/app${PYTHONPATH:+:$PYTHONPATH}"
 
-# Rebuild the sim + memory dbs from committed data and pre-seed the INC-2 class to
-# STANDING so the zero-LLM fast-path fires. Idempotent; safe on every boot.
+# Rebuild the sim + memory dbs from committed data. WP-DEMO §b: the graduation class opens at
+# L2/streak-0 (NOT force-pre-seeded to STANDING) — the visitor earns the zero-LLM fast path live.
+# Idempotent; safe on every boot.
 python scripts/demo_reset.py
 
 # Boot the MediaCo sim (127.0.0.1:8100) and the console (0.0.0.0:$PORT). Blocks.

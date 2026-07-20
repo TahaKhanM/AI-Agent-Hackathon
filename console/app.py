@@ -77,10 +77,17 @@ class _LegacySession:
 
 def _session(request: Request | None = None):
     """Resolve the world for THIS request: the pinned world in test mode, else the per-cookie
-    session (created fresh + cold-open on first hit / after eviction — fail-closed)."""
+    session (created fresh + cold-open on first hit / after eviction — fail-closed).
+
+    Side effect (production path): bind THIS session's model-call counter for the current request
+    context, so a model call anywhere downstream (triage/gate slow path) increments this visitor's
+    tally — never a process-wide global. Pinned/legacy mode leaves the process fallback in place."""
     if STATE is not None:
         return _LegacySession()
-    return sessionmod.session_from_request(request)
+    sess = sessionmod.session_from_request(request)
+    from precedent import venice
+    venice.bind_session_counter(sess.model_counter)
+    return sess
 
 
 # --------------------------------------------------------------------------- #
@@ -199,6 +206,12 @@ class TraceReq(BaseModel):
     incident_id: str | None = None
 
 
+class FunnelReq(BaseModel):
+    # Consent defaults to OFF (privacy-preserving): a body without an explicit True records nothing.
+    event: str
+    consent: bool = False
+
+
 # --------------------------------------------------------------------------- #
 # JSON API
 # --------------------------------------------------------------------------- #
@@ -214,6 +227,31 @@ def health(request: Request):
 @app.get("/api/state")
 def api_state(request: Request):
     return _session(request).state.snapshot()
+
+
+# Rail cadence for the SSE heartbeat (WP-DEMO §c). Kept < the ACL-freshness window so a rail is
+# never staler than a freshness decision. The client pulls a fresh /api/state on each 'rail' event.
+_RAIL_SSE_INTERVAL_S = 2.5
+
+
+async def _rail_event_stream(request: Request, interval: float = _RAIL_SSE_INTERVAL_S):
+    """The rail SSE generator: emit a 'rail' event immediately (first paint), then heartbeat until
+    the client disconnects. Each event tells the page to pull a fresh /api/state snapshot. Kept a
+    module-level async generator so it is deterministically unit-testable (drive it with a request
+    whose is_disconnected() flips) without streaming an infinite response through TestClient."""
+    while not await request.is_disconnected():
+        yield {"event": "rail", "data": "tick"}
+        await asyncio.sleep(interval)
+
+
+@app.get("/api/stream")
+async def api_stream(request: Request):
+    """WP-DEMO §c: real Server-Sent Events for the rail + ladder/audit updates (retires the
+    client-side setInterval poll). A dropped stream reconnects on the client, or falls back to
+    polling toward the real /api/state — never a spinner that lies. sse-starlette handles the wire
+    framing + disconnect detection."""
+    from sse_starlette.sse import EventSourceResponse
+    return EventSourceResponse(_rail_event_stream(request))
 
 
 @app.get("/api/events")
@@ -274,11 +312,13 @@ def api_kernel_hash():
 
 
 @app.get("/api/model-calls")
-def api_model_calls():
-    """Honest counter of REAL network calls to the open-weight model endpoint this session
-    (never cache hits). The zero-LLM fast path keeps it at 0, so the number IS the proof.
+def api_model_calls(request: Request):
+    """Honest counter of REAL network calls to the open-weight model endpoint THIS session
+    (never cache hits). ``_session`` binds this visitor's counter, so the number reflects this
+    session alone — never a cross-session global. The zero-LLM fast path keeps it at 0.
     """
     from precedent import venice
+    _session(request)   # bind this session's counter (no-op in pinned/legacy mode)
     return {"model_calls": venice.model_call_count()}
 
 
@@ -374,8 +414,19 @@ def api_approve(req: ApproveReq, request: Request):
     return _session(request).state.approve(req.incident_id, req.principal)
 
 
+@app.post("/api/recur")
+def api_recur(req: LadderReq, request: Request):
+    """WP-DEMO §b graduation: run ONE verified recurrence of the graduation class on the NEXT
+    distinct seeded target through the REAL ladder (ladder.on_verification_result). The 3rd
+    distinct recurrence lifts the class to the eligibility threshold so ladder.eligible() lights
+    the visitor's Promote button. No LLM, no raw upsert."""
+    return _session(request).state.record_recurrence(req.class_key or None)
+
+
 @app.post("/api/promote")
 def api_promote(req: LadderReq, request: Request):
+    # WP-CONSOLE med + WP-DEMO §b: routed through ladder.promote(force=False) inside state.promote —
+    # the raw STANDING upsert bypass is deleted; not-eligible is a fail-closed non-action.
     return _session(request).state.promote(req.class_key, req.principal)
 
 
@@ -395,11 +446,32 @@ def api_trace(req: TraceReq, request: Request):
     return _session(request).state.push_trace(req.model_dump())
 
 
+# --------------------------------------------------------------------------- #
+# Privacy-preserving funnel counters (WP-DEMO §d) — the day-90 kill-gate instrument.
+# --------------------------------------------------------------------------- #
+# Anonymous AGGREGATE counts only: no visitor id, no session id, only a coarse (daily) date. A call
+# without explicit consent records NOTHING (fail-closed). Per-visitor detail dies with the session
+# TTL; these aggregates persist. Hosted demo + landing surface ONLY — never the analyzer.
+@app.post("/api/funnel")
+def api_funnel(req: FunnelReq):
+    from console import funnel
+    return funnel.record(req.event, req.consent)
+
+
+@app.get("/api/funnel/totals")
+def api_funnel_totals():
+    """The anonymous aggregate the kill-gate reads. Carries no visitor/session detail — by
+    construction the store has only (day, event, count) rows."""
+    from console import funnel
+    return funnel.totals()
+
+
 @app.post("/api/demo/reset")
 def api_reset(request: Request):
     from precedent import venice
-    venice.reset_model_calls()
-    return _session(request).reset_world()
+    sess = _session(request)     # binds this session's counter…
+    venice.reset_model_calls()   # …so this zeroes THIS session's tally (process fallback in legacy)
+    return sess.reset_world()
 
 
 @app.get("/api/change-record/{incident_id}", response_class=PlainTextResponse)

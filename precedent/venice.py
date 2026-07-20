@@ -17,6 +17,7 @@ local routes to a local Ollama daemon (open-weight tags in precedent.models.LOCA
 """
 from __future__ import annotations
 
+import contextvars
 import hashlib
 import json
 import os
@@ -116,18 +117,73 @@ def _cache_key(kind: str, role: str, payload: dict) -> str:
 # (chat/embed), never cache hits. The demo surface reads this to render
 # "Model calls this session: 0" while the zero-LLM fast path resolves: the
 # counter is the proof, not a claim. View-only; participates in no decision.
+#
+# §2.6 isolation: the hosted attestation labels this "THIS session". So the tally
+# is genuinely PER-SESSION — the hosted layer binds a fresh counter per browser
+# session (console/session.py owns one; the ``_session`` resolvers bind it via a
+# ContextVar for the duration of each request), and a model call deep inside the
+# request increments THAT session's counter, never a cross-session global. Callers
+# with NO bound session context (bench, CLI, boot-time warm_up) fall back to a
+# process-level tally — backward compatible, and it can never bleed into a session.
 # --------------------------------------------------------------------------- #
-_MODEL_CALLS = 0
+class ModelCallCounter:
+    """A mutable tally of REAL model HTTP calls. One per session (bound per request);
+    one process-level fallback for unbound bench/CLI callers."""
+
+    __slots__ = ("value",)
+
+    def __init__(self, value: int = 0) -> None:
+        self.value = value
+
+    def increment(self) -> None:
+        self.value += 1
+
+    def reset(self) -> None:
+        self.value = 0
+
+
+# Process-level fallback: used ONLY when no per-session counter is bound (bench/CLI/warm_up).
+_PROCESS_COUNTER = ModelCallCounter()
+
+# The counter the CURRENT execution context increments. Default None => the process fallback.
+# The hosted session layer binds a per-session counter so /api/model-calls reflects THIS
+# visitor's calls. A ContextVar isolates concurrent requests (each request rebinds its own
+# session's counter before any model call is made in that request).
+_SESSION_COUNTER: contextvars.ContextVar[ModelCallCounter | None] = contextvars.ContextVar(
+    "precedent_model_call_counter", default=None)
+
+
+def new_call_counter() -> ModelCallCounter:
+    """Fresh per-session model-call counter (owned by a Session; bound per request)."""
+    return ModelCallCounter()
+
+
+def _current_counter() -> ModelCallCounter:
+    counter = _SESSION_COUNTER.get()
+    return counter if counter is not None else _PROCESS_COUNTER
+
+
+def bind_session_counter(counter: ModelCallCounter) -> contextvars.Token:
+    """Bind ``counter`` as the current context's model-call tally; return a reset token. Called by
+    the per-session resolver so a model call deep in the request increments THIS session's counter.
+    Backward compatible: with nothing bound, the process fallback is used."""
+    return _SESSION_COUNTER.set(counter)
+
+
+def unbind_session_counter(token: contextvars.Token) -> None:
+    """Restore the previously bound counter (undo one ``bind_session_counter``)."""
+    _SESSION_COUNTER.reset(token)
 
 
 def model_call_count() -> int:
-    """Number of real HTTP calls made to the model endpoint this process/session."""
-    return _MODEL_CALLS
+    """Real HTTP model calls in the CURRENT context — this session when one is bound, else the
+    process fallback (bench/CLI)."""
+    return _current_counter().value
 
 
 def reset_model_calls() -> None:
-    global _MODEL_CALLS
-    _MODEL_CALLS = 0
+    """Zero the CURRENT context's counter (the bound session's, else the process fallback)."""
+    _current_counter().reset()
 
 
 # --------------------------------------------------------------------------- #
@@ -136,11 +192,10 @@ def reset_model_calls() -> None:
 def _post(url: str, payload: dict, *, timeout: float) -> dict:
     """POST JSON, return parsed JSON. Raises on any transport/HTTP error. Tests
     monkeypatch this single function; nothing else in the module touches network."""
-    global _MODEL_CALLS
     resp = httpx.post(url, json=payload, headers=_headers(), timeout=timeout)
     resp.raise_for_status()
-    _MODEL_CALLS += 1     # count only a SUCCESSFUL model response — a timed-out/refused
-    return resp.json()    # attempt consulted no model (the deterministic path handled it)
+    _current_counter().increment()  # count only a SUCCESSFUL model response — a timed-out/refused
+    return resp.json()              # attempt consulted no model (the deterministic path handled it)
 
 
 # --------------------------------------------------------------------------- #
