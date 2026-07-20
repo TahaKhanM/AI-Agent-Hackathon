@@ -37,7 +37,7 @@ ASI:One chat ──▶ Watcher (Agentverse mailbox agent, Agent Chat Protocol)
 | `make sim` | boots sim :8100 + console :8000 sharing the file DB; drive with `curl -XPOST /api/drive/{1,2,3}` |
 | `make dryrun-watcher` | the LIVE Watcher chat handler drives the full loop offline: report → ONE approval message → approve → execute → audit-hash reply; STANDING repeat is zero-LLM |
 | `make bench` | conformance: FNR 0/5,219, FPR 0/4,781, 6/6 attacks, P99 0.445 µs — graded by an independent oracle (byte-identical correctness at seed 4207) |
-| `make bench-extractor` | extractor robustness over the 100-mutation corpus: **0 false-fast-paths / 100**, 25/25 red-herring decoys resisted |
+| `make bench-extractor` | extractor robustness (a **safety** number) over the 100-mutation corpus: **0 false-fast-paths / 100**, 25/25 red-herring decoys resisted |
 | `make check-open-weight` | the open-weight guard: closed-model ids appear only in `precedent/models.py` |
 | `make secrets-scan` | gitleaks full-history: no secrets committed |
 | `make test` | the full suite (178 tests) green |

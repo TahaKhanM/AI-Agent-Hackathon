@@ -13,7 +13,7 @@ allowed to touch."** Say each slowly and let it sit for a beat.
 
 ## Before you start (a glance, off-stage)
 
-Browser full-screen on **http://127.0.0.1:8000**. Check the top bar reads **8h 51m**, the top-right says
+Browser full-screen on **http://127.0.0.1:8000**. Check the top bar reads **8h 51m** (business-hours MTTR), the top-right says
 **✓ matches manifest**, and you can see **INC-1, INC-2, INC-3**. Wi-Fi can be off. If it looks half-used
 from a rehearsal: `make demo-reset && make sim &`, wait five seconds, refresh.
 

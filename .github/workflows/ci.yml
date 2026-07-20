@@ -1,0 +1,71 @@
+# Precedent CI — makes the "run in CI" claim (pyproject.toml) literally true.
+#
+# Every gate here is OFFLINE and DETERMINISTIC by design, so this workflow needs
+# ZERO repository secrets. bench/bench-extractor are fixed seed-4207 runs and
+# bench-extractor points the extractor at an unreachable Venice host. secrets-scan
+# walks full git history (--log-opts=--all), which is why checkout uses
+# fetch-depth: 0. Each Makefile gate is its own step for readable CI logs.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    env:
+      # Pinned gitleaks release used by `make secrets-scan`. 8.30.x matches the
+      # local dev baseline. No token/license input — gitleaks OSS needs none.
+      GITLEAKS_VERSION: "8.30.1"
+    steps:
+      - name: Checkout (full history for the secrets scan)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Create the .venv the Makefile targets expect
+        run: |
+          uv python install 3.13
+          uv venv --python 3.13
+          uv pip install -e ".[dev,agents]"
+
+      - name: Install gitleaks (pinned) onto PATH for make secrets-scan
+        run: |
+          set -euo pipefail
+          url="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL "$url" -o /tmp/gitleaks.tar.gz
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          mkdir -p "$HOME/.local/bin"
+          install -m 0755 /tmp/gitleaks "$HOME/.local/bin/gitleaks"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: gitleaks version
+        run: gitleaks version
+
+      - name: Rule 1 — open-weight guard
+        run: make check-open-weight
+
+      - name: Lint (ruff)
+        run: make lint
+
+      - name: Copy-lint (number/vocabulary honesty gate)
+        run: make copy-lint
+
+      - name: Tests (full suite, incl. agents rails)
+        run: make test
+
+      - name: Conformance bench (seed 4207)
+        run: make bench
+
+      - name: Extractor robustness bench (seed 4207, offline)
+        run: make bench-extractor
+
+      - name: Secrets scan (gitleaks, full history)
+        run: make secrets-scan
+
+      - name: Freeze-check (release gate)
+        run: make freeze-check

@@ -28,7 +28,8 @@ TOUR_TOOLTIP = (
 )
 
 HERO_LINE = (
-    "Manual runbook: 8h 51m per incident. Precedent (first time): ~60s. "
+    "Manual runbook: 8h 51m per incident (MetricNet business-hours MTTR). "
+    "Precedent (first time): ~60s. "
     "Precedent (from second time on): ~15s. This queue = 26.5 hours saved."
 )
 
@@ -39,7 +40,7 @@ SCALE_STORY = (
     "No LLM in the gate — cost per incident is constant."
 )
 
-# The 8-step manual runbook that sums to 8h 51m — the "before" side of the split.
+# The 8-step manual runbook that sums to 8h 51m business hours — the "before" side of the split.
 HUMAN_RUNBOOK = [
     {"t": "00:00",  "step": "Pager fires. On-call reads the symptom on Slack."},
     {"t": "+00:12", "step": "Search Confluence + Jira for a prior incident like this."},
@@ -53,7 +54,7 @@ HUMAN_RUNBOOK = [
 
 # One-liner proof callouts per track — used in the Fetch and BasedAI strips.
 TRACK_CALLOUTS = {
-    "conduct": "8h 51m → 15s per incident. Human stays in the loop at every checkpoint.",
+    "conduct": "8h 51m business hours → 15s per incident. Human stays in the loop at every checkpoint.",
     "fetch":   "3 agents on Agentverse. Chat Protocol published. Live inside ASI:One.",
     "basedai": "0 leaks across 5,219 permission probes. P99 < 1 ms. Audit chain hash-verifiable.",
 }
@@ -111,7 +112,7 @@ GUIDED_BEATS = [
     },
     {
         "target": "#before-after-strip",
-        "title":  "Beat 2 — The 8h 51m your team spends today",
+        "title":  "Beat 2 — The 8h 51m business hours your team spends today",
         "body":   ("Left: the 8-step human runbook. Slack pings, waiting on approval emails, "
                    "tab-hopping through Confluence. 8h 51m per incident (MetricNet business-hours MTTR). "
                    "This queue would cost your team a full working day."),

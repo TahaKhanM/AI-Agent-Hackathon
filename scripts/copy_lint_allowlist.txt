@@ -1,0 +1,7 @@
+# copy-lint allowlist — one substring/regex per line, each with a trailing '# reason'.
+# Keep this MINIMAL and justified: only genuine PROSE false positives belong here, never
+# a real mislabelled number. A pattern suppresses a finding when it matches the finding's
+# line text. Source of truth for every number+label: docs/numbers.md.
+
+Standing Approval", never "Autonomous  # R1: rule-of-thumb reminder in console/app.py header docstring — a MENTION of the banned label, not a use of it
+never blended with the 18.2 calendar-hour  # A1/A2: the canonical NEVER-BLEND disclaimer names 8h 51m (business) and 18.2 (calendar) with correct labels in ONE sentence precisely to say they are never blended

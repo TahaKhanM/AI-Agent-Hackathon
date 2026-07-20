@@ -627,7 +627,7 @@ function actHtml(key){
      </ul>
    </div>
    <div class="tally"><span class="lbl">Why this is worth solving — measured, honestly labelled</span><br>
-     <b>94.4%</b> of 24,918 real incidents arrived after their exact kind of fix had already been resolved before <em>(an “it existed already” claim)</em>. Even so, the median repeat still took <b>18.2 calendar hours</b> to resolve by hand — the hold-up is <em>finding and safely running</em> the fix, not knowing it.</div>
+     <b>94.4%</b> of 24,918 real incidents arrived after their exact kind of fix had already been resolved before <em>(an existence claim — it existed already)</em>. Even so, the median repeat still took <b>18.2 calendar hours</b> to resolve by hand — the hold-up is <em>finding and safely running</em> the fix, not knowing it.</div>
    <div class="tally"><span class="lbl">A safety number, not a cleverness number</span><br>
      <b id="rob">…</b> — no messy alert ever produced a confident wrong answer that could auto-run the wrong fix.</div>
    <div class="ctas">

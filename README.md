@@ -1,3 +1,5 @@
+![CI](https://github.com/TahaKhanM/AI-Agent-Hackathon/actions/workflows/ci.yml/badge.svg)
+
 <p align="center">
   <img src="assets/brand/precedent-logo.png" alt="Precedent" width="240">
 </p>
@@ -53,7 +55,8 @@ The bottleneck is not knowing the fix — it's *finding and safely executing* it
    computed fingerprint — `sha256(service | error_code | target_object_type)` — from a
    deterministic extractor. An LLM may *propose* fields for a messy ticket, but execution
    unlocks only on extractor-confirmed field **equality**, never semantic similarity.
-   Measured on a 100-ticket adversarial mutation corpus: **0 false fast-paths**, 25/25
+   Measured on a 100-ticket adversarial mutation corpus — a **safety** number, not an
+   accuracy one: **0 false fast-paths**, 25/25
    red-herring decoys resisted ([bench artifact](precedent_memory/bench/extractor_robustness.json)).
 2. **Approval never leaves the loop.** L0 observe → L1 recommend → L2 approval-gated →
    L3 **Standing Approval**: after 3 consecutive verified successes a *human* clicks

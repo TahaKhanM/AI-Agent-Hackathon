@@ -13,7 +13,7 @@ your speaking pace, not a stopwatch.
 
 | # | Time | Say (verbatim) | Do | What appears |
 |---|---|---|---|---|
-| 1 | **0:00–0:07** | *"IT incidents take 8 hours 51 minutes on average. The fix is usually a few clicks — once you find it."* | Point at the amber banner and the Before/After strip | 8h 51m baseline, 8 human steps vs 8 Precedent steps |
+| 1 | **0:00–0:07** | *"IT incidents take 8 hours 51 minutes on average. The fix is usually a few clicks — once you find it."* | Point at the amber banner and the Before/After strip | 8h 51m business-hours baseline, 8 human steps vs 8 Precedent steps |
 | 2 | **0:07–0:25** | *"Watch what Precedent does. Messy publisher ticket lands — extractor pulls the class fingerprint from mangled fields. Deterministic policy says L2. Plan on the left, rollback on the right. One human click."* | Hit `Enter` (fires INC-1 with hold) → click **Approve** in the browser | Gate card with plan + rollback + plan_hash → green resolved banner → **Promote** appears |
 | 3 | **0:25–0:32** | *"Trust this fix class — Standing Approval. Approval moves earlier in time."* | Click **Promote to Standing Approval** on INC-1 | Ladder flips to STANDING for `publisher\|PUB-4012\|schedule_item` |
 | 4 | **0:32–0:42** | *"Second time the same fingerprint arrives, no human is asked. Zero LLM calls. **The second time is free.** And when a runbook is restricted, the system refuses — fail-closed. **It knows what it's not allowed to touch.**"* | Hit `Enter` (fires INC-2 fast-path) → hit `Enter` (fires INC-3 refusal) | INC-2 resolves ~15s stopwatch draw; INC-3 shows `restricted — owner: Rights Ops` |
@@ -36,7 +36,7 @@ Both land in the same breath in Beat 4. If nothing else survives, those two line
 
 1. Terminal 1 open, cwd = `/Users/tahakhan/Documents/Work/Projects/AI-Agent-Hackathon`, venv active.
 2. Verify: `curl -s http://127.0.0.1:8000/api/kernel-hash` returns `matches_manifest: true`.
-3. Browser tab open on `http://127.0.0.1:8000/`, refreshed — Baseline Bar reads **8h 51m**, header shows `kernel bf0cfad5fc9e ✓ matches manifest`, ladder shows one class already STANDING (pre-seeded).
+3. Browser tab open on `http://127.0.0.1:8000/`, refreshed — Baseline Bar reads **8h 51m** (business-hours MTTR), header shows `kernel bf0cfad5fc9e ✓ matches manifest`, ladder shows one class already STANDING (pre-seeded).
 4. Terminal 2 open at the same cwd, run `bash scripts/run_one_min_demo.sh`. It prints the first cue and waits.
 5. Wi-Fi OFF. Do Not Disturb ON.
 

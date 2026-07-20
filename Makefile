@@ -2,7 +2,7 @@
 PY := .venv/bin/python
 PIP := uv pip
 
-.PHONY: help install check-open-weight test lint secrets-scan sim console jira-smoke demo-reset bench bench-extractor bench-uci live-drift dryrun-watcher freeze-check
+.PHONY: help install check-open-weight test lint secrets-scan copy-lint sim console jira-smoke demo-reset bench bench-extractor bench-uci live-drift dryrun-watcher freeze-check
 
 help:
 	@echo "install          install core+dev deps into .venv (add agents extra separately)"
@@ -10,6 +10,7 @@ help:
 	@echo "test             pytest (full suite)"
 	@echo "lint             ruff check"
 	@echo "secrets-scan     gitleaks full-history scan (must be clean before repo goes public)"
+	@echo "copy-lint        mechanical number/vocabulary honesty gate over shipped surfaces"
 	@echo "sim              run the MediaCo sim (:8100) + judge console (:8000), T1 in-process"
 	@echo "console          run the T2 judge console on :8000 (standalone, seeded demo)"
 	@echo "demo-reset       reset sim state, memory, ladder in <30s"
@@ -33,6 +34,11 @@ lint:
 
 secrets-scan:
 	gitleaks detect --source . --log-opts="--all" --redact -v
+
+# Copy-lint — the mechanical number/vocabulary honesty gate. Every number on a shipped
+# surface must carry the label docs/numbers.md mandates; banned vocabulary never appears.
+copy-lint:
+	$(PY) scripts/copy_lint.py
 
 # Boot the MediaCo sim (:8100) + the judge console (:8000) sharing the demo dbs.
 # T1's driver streams the live trace to the console (see scripts/drive_incident.py).
@@ -76,6 +82,6 @@ live-drift:
 # Release guard: everything that must be true before a public cut.
 # The placeholder grep matches a COMPLETE ‹…› token on shippable surfaces (README + bench
 # results), so self-referential prose ("Ctrl-F for `‹`") never trips it.
-freeze-check: check-open-weight test lint secrets-scan
+freeze-check: check-open-weight test lint secrets-scan copy-lint
 	@! grep -rnE "‹[^›]*›" README.md precedent_memory/bench/RESULTS.md 2>/dev/null || (echo "unfilled ‹…› placeholder on a shippable surface — fill or delete"; exit 1)
 	@echo "freeze-check passed"
