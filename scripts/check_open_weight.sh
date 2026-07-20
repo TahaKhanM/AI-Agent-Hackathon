@@ -8,7 +8,7 @@ set -euo pipefail
 
 PATTERN='claude-|openai-|gpt-|gemini-|grok-|mercury-'
 # Search python source in the runtime packages, excluding the registry file itself.
-HITS=$(grep -rnE "$PATTERN" --include="*.py" precedent precedent_memory sim console agents 2>/dev/null \
+HITS=$(grep -rnE "$PATTERN" --include="*.py" precedent precedent_memory sim console agents gate 2>/dev/null \
   | grep -v '^precedent/models.py:' || true)
 
 if [ -n "$HITS" ]; then

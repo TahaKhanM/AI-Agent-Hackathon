@@ -141,6 +141,30 @@ def _rm_db(path: str) -> None:
             pass
 
 
+def _copy_sqlite_db(src: str, dst: str) -> None:
+    """Copy a sqlite db to ``dst`` as a COMPLETE, self-contained snapshot — hermetically.
+
+    Plain ``shutil.copyfile`` copies only the named main file; if the source has a live ``-wal``
+    sidecar with committed-but-un-checkpointed frames (WAL journal mode), the copy is TORN — it
+    silently drops those rows and can even fail an integrity check. That non-hermetic copy is the
+    root of the intermittent gate/sim RED (a copy racing a partially-written template).
+
+    The sqlite online backup API reads a CONSISTENT image THROUGH the SQLite engine, so any
+    committed WAL frames are included and a fresh, single-file db is produced regardless of the
+    source's journal mode or sidecar state. Any stale sidecars at ``dst`` are removed first.
+    """
+    _rm_db(dst)
+    src_conn = sqlite3.connect(src)
+    try:
+        dst_conn = sqlite3.connect(dst)
+        try:
+            src_conn.backup(dst_conn)  # consistent snapshot incl. any committed WAL frames
+        finally:
+            dst_conn.close()
+    finally:
+        src_conn.close()
+
+
 def memory_template() -> str:
     """Path to the cold-open MEMORY db template (records + ACLs + principals + ladder, with the
     scheduler class pre-promoted to STANDING so INC-2 fast-paths). Built once, then copied."""
@@ -192,8 +216,17 @@ def sim_template() -> str:
         try:
             core.reset(conn)  # DROP+rebuild from committed data/raw + data/kb, seed incidents
             conn.commit()
+            conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")  # fold any WAL into the main file
+            conn.commit()
         finally:
             conn.close()
+        # Drop any WAL/SHM sidecars so every session copies ONE complete file (hermetic — mirrors
+        # memory_template). Belt-and-braces with _copy_sqlite_db, which is torn-copy-safe anyway.
+        for suffix in ("-wal", "-shm"):
+            try:
+                os.remove(path + suffix)
+            except OSError:
+                pass
         _SIM_TEMPLATE = path
         return path
 
@@ -273,7 +306,7 @@ class Session:
     def sim_client(self) -> TestClient:
         with self._sim_lock:
             if self._sim_client is None:
-                shutil.copyfile(sim_template(), self.sim_path)
+                _copy_sqlite_db(sim_template(), self.sim_path)  # hermetic — never a torn copy
                 self._sim_app = make_sim_app(self.sim_path)
                 self._sim_client = TestClient(self._sim_app)
             return self._sim_client

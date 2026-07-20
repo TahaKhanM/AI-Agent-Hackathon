@@ -32,6 +32,8 @@ from pydantic import BaseModel
 
 from console import session as sessionmod
 from console import showcase
+from gate.api import make_gate_router
+from gate.world import DEFAULT_PRINCIPALS, gate_world_from_session
 
 # --------------------------------------------------------------------------- #
 # Per-session resolution + legacy test pin
@@ -419,3 +421,21 @@ def api_change_record(incident_id: str, request: Request):
 @app.get("/")
 def index(request: Request):
     return templates.TemplateResponse(request=request, name="demo.html")
+
+
+# --------------------------------------------------------------------------- #
+# Versioned HTTP Gate API (WP-API) — the product spine, mounted into ONE deploy.
+# --------------------------------------------------------------------------- #
+# Every surface consumes /v1/gate; the console dogfoods it over HTTP. The gate operates on the
+# CURRENT session's private world (memory db + in-process sim + a per-session pending registry),
+# resolved the same way every other route resolves its world (``_session``). No LLM in the gate's
+# decision path; identity is passed in-band but registered out-of-band (see gate/README.md).
+def _gate_world(request: Request):
+    # Pass a CONCRETE principals set so the mounted gate enforces out-of-band registration: an
+    # unregistered, self-asserted principal is a non-action (deny/reject). Without this the gate
+    # world defaulted principals=None (restriction OFF) and ANY claimed identity was accepted —
+    # a deployed auth bypass. The seeded session registers exactly DEFAULT_PRINCIPALS.
+    return gate_world_from_session(_session(request), principals=DEFAULT_PRINCIPALS)
+
+
+app.include_router(make_gate_router(_gate_world), prefix="/v1/gate")
