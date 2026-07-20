@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Precedent — Case File</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/precedent.css">
+<link rel="stylesheet" href="/static/css/product.css">
+</head>
+<body><div class="wrap pconsole">
+<header>
+  <span class="mark"><img src="/static/precedent-seal.png" alt="Precedent seal"></span>
+  <div class="wm"><span class="name">PRECEDENT</span>
+    <span class="tag">The case file is the product. Take it to your auditor without us in the room.</span></div>
+  <div class="chips">
+    <span class="chip ok" id="chip-kernel" title="A fingerprint of the decision-making code, pinned in MANIFEST.json — a committed file the running process cannot forge.">kernel <b id="kh">…</b></span>
+    <button class="chip nollchip" id="chip-noll" aria-expanded="false" aria-controls="noll-pop"
+      title="The gate's decide path calls no model. Activate for the proof references + the live counter.">No LLM in this decision <b id="mc">0</b></button>
+    <span class="chip" id="chip-verdict">no case selected</span>
+  </div>
+</header>
+<div class="rule"></div>
+
+<!-- No-LLM proof popover (keyboard-reachable; toggled by the header badge) -->
+<div class="pop" id="noll-pop" role="region" aria-label="No-LLM proof references" hidden>
+  <b>“No LLM in THIS decision” — scoped, and proven.</b>
+  <p>The gate's propose/decide/outcome path calls no model. The SMART model may still author
+     <em>non-load-bearing</em> rationale prose elsewhere (labelled as such); it never sets a class,
+     a verdict, or a fast-path.</p>
+  <ul class="proofrefs">
+    <li><code>tests/test_gate_api.py::test_standing_allow_fast_path_is_zero_llm</code> — asserts <code>spy.n==0</code> AND <code>venice.model_call_count()==0</code></li>
+    <li><code>tests/test_gate_api.py::test_unknown_class_denied_without_llm</code> — denied before the extractor's LLM branch</li>
+    <li><code>.github/workflows/ci.yml</code> — the “Tests (full suite)” job runs these on every push</li>
+    <li><code>gate/models.py</code> GateInfo.decision_authority — the gate's own honest self-description</li>
+    <li>live: <code>GET /api/model-calls</code> = <b class="livemc">0</b> real model calls this session</li>
+  </ul>
+</div>
+
+<!-- Honest framing strip: this console shows the RECORD. No inbox, no registration, no report page. -->
+<div class="p-strip">
+  <span class="pf-lead">This console shows the <b>record</b>.</span>
+  Approvals also land in Slack (P1). No inbox, no sign-up — just the notarised case file for one incident,
+  self-authenticating with no secret key.
+  <span class="picker" id="picker" role="group" aria-label="Case files"></span>
+</div>
+
+<main class="pmain">
+  <!-- LEFT: chain-rail spine + the notarised case file -->
+  <div class="spinecol">
+    <div class="chaincol"><div class="chainrail" id="chainrail" aria-hidden="true"></div></div>
+    <section class="casefile" id="casefile" aria-live="polite">
+      <div class="cf-empty">Select a case file above. If it has not been filed yet, drive the incident
+        through the gate and its record appears here — proposal, deterministic decision, the rollback
+        armed <em>before</em> execution, the typed transcript, verification, and the hash-chain proof.</div>
+    </section>
+
+    <!-- Azure §2.7 contrast panel — the ONE permitted sentence, verbatim, with its dated citation. -->
+    <aside class="azurecard" aria-label="Fail-closed contrast">
+      <div class="az-h">Fail-closed, end to end <span class="az-cite">docs/research/08b · 2026-07-18</span></div>
+      <p class="az-sentence">Azure's tool-access-policy engine is deterministic and fail-closed — but its LLM hook layer defaults failMode=ALLOW (fail-open), Autonomous-mode 'Ask' auto-approves, and a Stop-hook rejection without a reason is treated as approval, so it is not fail-closed end-to-end. Precedent is.</p>
+      <div class="az-foot">The “Precedent is” claim resolves to the same fail-closed anchors as the verdict badge:
+        <code>gate/models.py</code> failure_direction · <code>precedent/policy.py</code> assess() degraded cap · gate expiry non-action.</div>
+    </aside>
+  </div>
+
+  <!-- RIGHT sticky rail: ladder/policy + evidence-pack list & on-page verifier -->
+  <aside class="prail">
+    <div class="panel ladderpanel">
+      <h3>Approval ladder <span class="badge" id="ladder-classlbl">—</span></h3>
+      <div id="ladder"></div>
+      <p class="ladder-rule">Promotion is a <b>human click</b> after <b>3 consecutive verified</b> runs at L2 with
+        zero rollbacks — never automatic. A visible <b>Revoke</b> demotes instantly; any verification failure
+        auto-demotes to L1.</p>
+    </div>
+
+    <div class="panel packpanel">
+      <h3>Evidence pack <span class="chainpill ok" id="verifier-stamp">not run</span></h3>
+      <div id="packbox">
+        <p class="muted">Select a filed case to load its sealed pack, verify it offline in this page,
+          and download the JSON + HTML for an air-gapped auditor.</p>
+      </div>
+
+      <!-- Kernel-hash freeze diff (Concept-2 graft) -->
+      <div class="freeze" id="freeze">
+        <span class="fz-k">kernel freeze</span>
+        <code id="fz-manifest">MANIFEST.json bf0cfad5fc9e</code>
+        <span class="fz-eq" id="fz-eq">vs</span>
+        <code id="fz-live">live …</code>
+        <span class="fz-note">disagreement means someone edited the frozen deterministic surface —
+          <code>make freeze-check</code>.</span>
+      </div>
+
+      <!-- CI-green band (Concept-2 graft): each Makefile/ci.yml gate as a chip. -->
+      <div class="ciband">
+        <span class="ci-k">CI gates</span>
+        <span class="cic">open-weight guard</span><span class="cic">product zero-kernel-import</span>
+        <span class="cic">ruff</span><span class="cic">copy-lint</span><span class="cic">tests</span>
+        <span class="cic">bench</span><span class="cic">bench-extractor</span><span class="cic">secrets-scan</span>
+        <span class="cic">freeze-check</span>
+        <span class="ci-cap">every gate runs offline and deterministic, with zero repository secrets.</span>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<script src="/static/js/product.js"></script>
+</div></body></html>

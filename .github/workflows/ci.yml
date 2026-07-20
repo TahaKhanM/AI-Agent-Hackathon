@@ -49,6 +49,9 @@ jobs:
       - name: Rule 1 — open-weight guard
         run: make check-open-weight
 
+      - name: WP-CONSOLE — product zero-kernel-import guard
+        run: make check-product-imports
+
       - name: Lint (ruff)
         run: make lint
 

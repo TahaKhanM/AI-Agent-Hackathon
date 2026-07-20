@@ -2,11 +2,12 @@
 PY := .venv/bin/python
 PIP := uv pip
 
-.PHONY: help install check-open-weight test lint secrets-scan copy-lint policy-lint evidence-pack sim console jira-smoke demo-reset bench bench-extractor bench-uci live-drift dryrun-watcher freeze-check
+.PHONY: help install check-open-weight check-product-imports test lint secrets-scan copy-lint policy-lint evidence-pack sim console jira-smoke demo-reset bench bench-extractor bench-uci live-drift dryrun-watcher freeze-check
 
 help:
 	@echo "install          install core+dev deps into .venv (add agents extra separately)"
 	@echo "check-open-weight BasedAI guard: model names only in precedent/models.py"
+	@echo "check-product-imports  WP-CONSOLE guard: console/product/ imports no kernel (HTTP-only)"
 	@echo "test             pytest (full suite)"
 	@echo "lint             ruff check"
 	@echo "secrets-scan     gitleaks full-history scan (must be clean before repo goes public)"
@@ -25,6 +26,11 @@ install:
 
 check-open-weight:
 	./scripts/check_open_weight.sh
+
+# WP-CONSOLE hard boundary: the kernel-free page package console/product/ must import no kernel
+# (precedent*/sim/console.demo_state) — it consumes state ONLY over HTTP. Mirrors check-open-weight.
+check-product-imports:
+	./scripts/check_product_imports.sh
 
 test:
 	$(PY) -m pytest -q
@@ -97,6 +103,6 @@ live-drift:
 # Release guard: everything that must be true before a public cut.
 # The placeholder grep matches a COMPLETE ‹…› token on shippable surfaces (README + bench
 # results), so self-referential prose ("Ctrl-F for `‹`") never trips it.
-freeze-check: check-open-weight test lint secrets-scan copy-lint policy-lint
+freeze-check: check-open-weight check-product-imports test lint secrets-scan copy-lint policy-lint
 	@! grep -rnE "‹[^›]*›" README.md precedent_memory/bench/RESULTS.md 2>/dev/null || (echo "unfilled ‹…› placeholder on a shippable surface — fill or delete"; exit 1)
 	@echo "freeze-check passed"

@@ -32,6 +32,8 @@ from pydantic import BaseModel
 
 from console import session as sessionmod
 from console import showcase
+from console.product import make_product_router
+from console.read_api import make_read_router
 from gate.api import make_gate_router
 from gate.world import DEFAULT_PRINCIPALS, gate_world_from_session
 
@@ -439,3 +441,14 @@ def _gate_world(request: Request):
 
 
 app.include_router(make_gate_router(_gate_world), prefix="/v1/gate")
+
+
+# --------------------------------------------------------------------------- #
+# WP-CONSOLE — the per-incident notarised case-file console.
+# --------------------------------------------------------------------------- #
+# The kernel-backed read/query + ladder-control endpoints (console/read_api.py) resolve the SAME
+# per-session world every other route uses. The kernel-FREE page router (console/product/) renders
+# the /console shell that consumes those endpoints (and /v1/gate/*) over HTTP — it imports no
+# kernel (CI-guarded by scripts/check_product_imports.sh).
+app.include_router(make_read_router(_session))
+app.include_router(make_product_router())
