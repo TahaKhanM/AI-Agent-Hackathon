@@ -75,11 +75,14 @@ def test_promote_stores_canonical_standing_displays_label(client):
 
 
 def test_class_ladder_row_holds_canonical_token_not_display_text(client):
-    from console.demo_state import STATE
+    # WP-HOST-SESSION: the process-wide STATE singleton is retired; read THIS client's
+    # per-session memory db (resolved from its session cookie) to inspect the raw ladder row.
+    from console.session import COOKIE_NAME, SESSIONS
     cls = "publisher|PUB-4012|schedule_item"
     client.post("/api/promote", json={"class_key": cls})
-    level = STATE.conn.execute("SELECT level FROM class_ladder WHERE class_key=?",
-                               (cls,)).fetchone()["level"]
+    conn = SESSIONS.get(client.cookies.get(COOKIE_NAME)).state.conn
+    level = conn.execute("SELECT level FROM class_ladder WHERE class_key=?",
+                         (cls,)).fetchone()["level"]
     assert level == "STANDING"                        # DB never stores display text
     assert level != "Standing Approval"
 

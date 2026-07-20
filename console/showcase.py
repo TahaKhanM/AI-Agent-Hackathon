@@ -168,13 +168,16 @@ GUIDED_BEATS = [
 # --------------------------------------------------------------------------- #
 # Latency ring buffer (populated by wrap-around helper below).
 # --------------------------------------------------------------------------- #
+# WP-HOST-SESSION: the ring is now PER SESSION (session.lat_ring) so one visitor's sparkline
+# never bleeds into another's. Callers pass their session's ring; this module-level ring is the
+# default used only in pinned/legacy test mode (and by a direct import that omits a ring).
 _LAT_RING: deque[int] = deque(maxlen=200)
 _LAT_SLA_MS = 200  # BasedAI-declared SLA
 
 
-def record_latency_ns(elapsed_ns: int) -> None:
-    """Called by wrapper below; append one measurement to the ring."""
-    _LAT_RING.append(int(elapsed_ns))
+def record_latency_ns(elapsed_ns: int, ring: deque[int] | None = None) -> None:
+    """Append one measurement to the given session ring (or the module default)."""
+    (ring if ring is not None else _LAT_RING).append(int(elapsed_ns))
 
 
 def _pct(values: list[int], pct: float) -> float:
@@ -185,16 +188,15 @@ def _pct(values: list[int], pct: float) -> float:
     return s[k]
 
 
-def _bench_permission_check(n: int = 200) -> None:
-    """Populate the latency ring with REAL permission-check timings against the
-    live memory db. Read-only — this uses precedent_memory.retrieve.check_access
-    exactly as the runtime path does. Called at startup and on demand.
+def _bench_permission_check(conn, ring: deque[int] | None = None, n: int = 200) -> None:
+    """Populate the latency ring with REAL permission-check timings against the SESSION's
+    memory db. Read-only — this uses precedent_memory.retrieve.check_access exactly as the
+    runtime path does. Called on demand when the ring is empty.
     """
+    ring = ring if ring is not None else _LAT_RING
     try:
-        from console.demo_state import STATE
         from precedent_memory import retrieve as _rt
         # Sample the existing memory records' ids
-        conn = STATE.conn
         rows = list(conn.execute("SELECT id FROM memory_record LIMIT 20"))
         if not rows:
             return
@@ -210,15 +212,15 @@ def _bench_permission_check(n: int = 200) -> None:
                 # If the schema is not initialised, just skip — the ring stays empty
                 # and the strip shows "drive an incident to populate" until real drives fire.
                 return
-            _LAT_RING.append(time.perf_counter_ns() - t0)
+            ring.append(time.perf_counter_ns() - t0)
     except Exception:
         # Fail-open here: this is a VIEW feature. Don't crash the console over a bench.
         pass
 
 
-def latency_snapshot() -> dict[str, Any]:
+def latency_snapshot(ring: deque[int] | None = None) -> dict[str, Any]:
     """Roll up the ring into a display snapshot."""
-    vals = list(_LAT_RING)
+    vals = list(ring if ring is not None else _LAT_RING)
     p50_us = _pct(vals, 50) / 1000.0 if vals else 0.0
     p99_us = _pct(vals, 99) / 1000.0 if vals else 0.0
     return {
@@ -278,8 +280,8 @@ def manifest_expected_hash() -> str | None:
         return None
 
 
-def run_adversarial_probes(n: int = 100) -> dict[str, Any]:
-    """Fire n adversarial permission-check probes against the live memory db.
+def run_adversarial_probes(conn, ring: deque[int] | None = None, n: int = 100) -> dict[str, Any]:
+    """Fire n adversarial permission-check probes against the SESSION's memory db.
     Read-only. Uses precedent_memory.retrieve.check_access exactly as the runtime
     path does. Reports: total, denials, permits, and — for the leak-attempt
     subset (unauthorised principals against restricted records) — the number of
@@ -287,10 +289,9 @@ def run_adversarial_probes(n: int = 100) -> dict[str, Any]:
 
     A leak counter of 0 with a P99 well under 1ms is the BasedAI evidence surface.
     """
-    from console.demo_state import STATE
     from precedent_memory import retrieve as _rt
 
-    conn = STATE.conn
+    ring = ring if ring is not None else _LAT_RING
     rows = list(conn.execute(
         "SELECT id, is_restricted FROM effective_policy JOIN memory_record ON "
         "memory_record.id = effective_policy.record_id LIMIT 40"))
@@ -340,7 +341,7 @@ def run_adversarial_probes(n: int = 100) -> dict[str, Any]:
     p99 = _pct(timings, 99) / 1000.0 if timings else 0.0
     # Also fold into the display ring so the sparkline reflects the probe run.
     for v in timings:
-        _LAT_RING.append(v)
+        ring.append(v)
     return {
         "n": len(timings),
         "permitted": permitted,

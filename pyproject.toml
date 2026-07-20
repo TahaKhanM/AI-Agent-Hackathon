@@ -38,10 +38,21 @@ dev = [
     "pytest-asyncio>=0.24",   # test_concurrency uses async workers
     "ruff>=0.7",
 ]
+# Dev-only browser end-to-end harness (tests/e2e). Kept as a SEPARATE extra so the default dev
+# install stays slim and offline: `uv pip install -e ".[e2e]" && playwright install chromium`.
+# When absent, the collection guard drops tests/e2e cleanly (bare checkout stays green, 0 skips).
+# NOT a runtime/product dependency — the container image never installs it (tests/ is dockerignored).
+e2e = [
+    "playwright>=1.55",       # two-session isolation e2e + perceptual visual baseline
+    "pillow>=10.0",           # downscale + perceptual-hash the design-system screenshots
+]
 
 [tool.pytest.ini_options]
 testpaths = ["precedent_memory/tests", "tests"]
 asyncio_mode = "auto"
+markers = [
+    "browser: dev-only Playwright end-to-end tests (tests/e2e); dropped from collection when the browser stack is absent",
+]
 
 [tool.ruff]
 line-length = 100

@@ -60,6 +60,10 @@ BASELINE_SOURCE_LABEL = "MetricNet business-hours MTTR (industry benchmark, labe
 RIGHTS = ("jira", "issue-security:rights", "Rights Ops")
 SCHED = ("jira", "issue-security:scheduling", "Scheduling Ops")
 
+# INC-2's incident class — pre-promoted to STANDING in the cold-open snapshot so the zero-LLM
+# fast-path fires on stage (see console/session.py memory_template + scripts/demo_reset.py).
+SCHED_CLASS_STANDING = "scheduler|SCH-DUP-002|schedule_item"
+
 # Canonical ladder DATA token vs DISPLAY text (T1 reads the canonical token).
 STANDING = "STANDING"
 LEVEL_LABELS = {"L0": "L0", "L1": "L1", "L2": "L2", "STANDING": "Standing Approval",
@@ -364,5 +368,9 @@ class DemoState:
             return {"ok": True}
 
 
-# Process-wide singleton the app imports (honours PRECEDENT_MEMORY_DB at import).
-STATE = DemoState()
+# WP-HOST-SESSION: the process-wide ``STATE = DemoState()`` singleton was RETIRED. It made every
+# hosted visitor share one memory db (ladder + audit chain), so visitor A's promote/drive leaked
+# into B. The served app now builds one DemoState PER browser session (console/session.py); the
+# only remaining module-level ``STATE`` names live in console/app.py and scripts/demo_server.py
+# as an OPT-IN test pin (default None) — production never shares a mutable DemoState across
+# sessions. Non-served callers construct ``DemoState(db_path=...)`` explicitly.

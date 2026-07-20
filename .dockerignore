@@ -20,6 +20,10 @@ docs
 .playwright-mcp
 *.pdf
 
+# Dev-only test suite (incl. the Playwright e2e harness + its visual baseline) — never
+# needed at runtime and never in the product image. Keeps Playwright out of the container.
+tests
+
 # Local-only
 .env
 .env.*

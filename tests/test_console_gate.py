@@ -51,9 +51,10 @@ def demo(sim_client, mem, monkeypatch):
     import console.app as capp
     import scripts.demo_server as ds
     _t1, console = mem
-    # Both modules bound `from console.demo_state import STATE` at import; in production they are
-    # the SAME singleton. In the test, point BOTH at the fixture's DemoState so the drive
-    # (demo_server) and the read/export endpoints (console.app) share one connection.
+    # WP-HOST-SESSION: production resolves a per-cookie session per request. This pre-session
+    # test PINS both modules' ``STATE`` to the fixture's DemoState so the app runs in single-world
+    # mode (middleware + per-cookie store bypassed) and the drive (demo_server) + the read/export
+    # endpoints (console.app) share one connection — exactly the old topology this test locked.
     monkeypatch.setattr(ds, "STATE", console)
     monkeypatch.setattr(capp, "STATE", console)
     monkeypatch.setattr(ds, "SimTools", lambda *a, **k: SimTools(client=sim_client))
