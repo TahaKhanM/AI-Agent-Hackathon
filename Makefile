@@ -2,7 +2,7 @@
 PY := .venv/bin/python
 PIP := uv pip
 
-.PHONY: help install check-open-weight test lint secrets-scan copy-lint sim console jira-smoke demo-reset bench bench-extractor bench-uci live-drift dryrun-watcher freeze-check
+.PHONY: help install check-open-weight test lint secrets-scan copy-lint policy-lint evidence-pack sim console jira-smoke demo-reset bench bench-extractor bench-uci live-drift dryrun-watcher freeze-check
 
 help:
 	@echo "install          install core+dev deps into .venv (add agents extra separately)"
@@ -39,6 +39,21 @@ secrets-scan:
 # surface must carry the label docs/numbers.md mandates; banned vocabulary never appears.
 copy-lint:
 	$(PY) scripts/copy_lint.py
+
+# Policy authoring kit (WP-POLICY): lint the deterministic policy packs — every executable
+# action class must declare a TRUE inverse (rollback) and a verification probe; credential
+# rotations and password resets stay rejected (§2.5). CLI: `precedent policy lint`.
+policy-lint:
+	$(PY) -m precedent.cli.policy policy lint
+
+# Evidence Pack v1 (WP-PACK): seed a world (seed 4207), drive the 3 demo incidents through
+# the real gate, write a per-incident signed JSON+HTML bundle, then verify each offline
+# (stdlib only, exits non-zero on any tampered byte).
+evidence-pack:
+	$(PY) -c "from precedent_pack import generate_demo_packs; [print(w['incident_id'],'->',w['json']) for w in generate_demo_packs('build/evidence-packs')]"
+	$(PY) verify_pack.py build/evidence-packs/INC-1.pack.json
+	$(PY) verify_pack.py build/evidence-packs/INC-2.pack.json
+	$(PY) verify_pack.py build/evidence-packs/INC-3.pack.json
 
 # Boot the MediaCo sim (:8100) + the judge console (:8000) sharing the demo dbs.
 # T1's driver streams the live trace to the console (see scripts/drive_incident.py).
@@ -82,6 +97,6 @@ live-drift:
 # Release guard: everything that must be true before a public cut.
 # The placeholder grep matches a COMPLETE ‹…› token on shippable surfaces (README + bench
 # results), so self-referential prose ("Ctrl-F for `‹`") never trips it.
-freeze-check: check-open-weight test lint secrets-scan copy-lint
+freeze-check: check-open-weight test lint secrets-scan copy-lint policy-lint
 	@! grep -rnE "‹[^›]*›" README.md precedent_memory/bench/RESULTS.md 2>/dev/null || (echo "unfilled ‹…› placeholder on a shippable surface — fill or delete"; exit 1)
 	@echo "freeze-check passed"

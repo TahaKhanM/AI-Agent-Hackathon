@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><!--TITLE--></title>
+<style>
+  /* Self-contained: inline CSS only, no external fonts/scripts/images. Renders air-gapped. */
+  :root {
+    --indigo: #3C3B62; --cream: #F1F1E2; --ink: #2A2A48;
+    --line: #cfceb8; --muted: #6b6a55; --card: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 2rem 1rem; background: var(--cream); color: var(--ink);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  main { max-width: 980px; margin: 0 auto; }
+  h1 { font-family: Georgia, "Times New Roman", serif; color: var(--indigo); font-size: 1.7rem; margin: 0 0 .25rem; }
+  h2 { font-family: Georgia, "Times New Roman", serif; color: var(--indigo); font-size: 1.2rem;
+       border-bottom: 2px solid var(--line); padding-bottom: .3rem; margin: 1.75rem 0 .75rem; }
+  h3 { color: var(--ink); font-size: 1rem; margin: 1rem 0 .4rem; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+            padding: 1rem 1.25rem; margin: 1rem 0; }
+  p.disclaimer {
+    background: #efeede; border-left: 4px solid var(--indigo); color: var(--ink);
+    padding: .7rem .9rem; border-radius: 4px; font-size: .92rem; margin: .5rem 0 1.5rem;
+  }
+  p.muted { color: var(--muted); font-size: .9rem; }
+  table { border-collapse: collapse; width: 100%; margin: .3rem 0; }
+  table.kv th { text-align: left; width: 210px; color: var(--indigo); font-weight: 600;
+                vertical-align: top; padding: .28rem .5rem; }
+  table.kv td { padding: .28rem .5rem; word-break: break-word; }
+  table.kv tr:nth-child(even) { background: #faf9ef; }
+  table.log { font-size: .82rem; display: block; overflow-x: auto; }
+  table.log th { background: var(--indigo); color: var(--cream); text-align: left;
+                 padding: .35rem .5rem; white-space: nowrap; }
+  table.log td { border-bottom: 1px solid var(--line); padding: .3rem .5rem; vertical-align: top; }
+  code { font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; font-size: .82em; }
+  pre#pack-json {
+    background: var(--ink); color: #e8e8dd; padding: .9rem; border-radius: 6px;
+    overflow-x: auto; white-space: pre-wrap; word-break: break-all; font-size: .72rem;
+    max-height: 22rem; overflow-y: auto;
+  }
+  footer { color: var(--muted); font-size: .8rem; text-align: center; margin: 2rem 0 .5rem; }
+</style>
+</head>
+<body>
+<main>
+<!--CONTENT-->
+<footer>Precedent — Evidence Pack v1. Self-authenticating (recomputable hash chain + sha256 manifest); no secret key. Evidence support, not a compliance determination.</footer>
+</main>
+</body>
+</html>

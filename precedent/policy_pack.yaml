@@ -22,47 +22,68 @@ degraded_cap:
   ladder_ceiling: L1
 
 classes:
+  # Optional authoring-kit fields (required_approver_role / inverse / verification_probe)
+  # extend the executable classes ADDITIVELY — policy.assess()/rule_for() ignore them; only
+  # `precedent policy lint` reads them. Schema: docs/policy-action-class-schema.md.
   "publisher|PUB-4012|schedule_item":
     risk_class: standard_change
     policy_rule_id: PUB-4012-REPUBLISH
     ladder_ceiling: L2            # first-occurrence L1; can graduate toward Standing Approval
     action_type: republish_epg
+    required_approver_role: publishing-ops
     lineage_refs: ["kb:KB-0001"]
+    inverse: {strategy: restore_snapshot, reversible: true, tool: restore}
+    verification_probe: {strategy: object_health, expect_healthy: true}
 
   "scheduler|SCH-DUP-002|schedule_item":
     risk_class: standard_change
     policy_rule_id: SCH-DUP-002-DEDUPE
     ladder_ceiling: STANDING       # the fast-path repeat class (graduates to Standing Approval)
     action_type: dedupe_slot
+    required_approver_role: scheduling-ops
     lineage_refs: ["jira:MEDIA-113"]
+    inverse: {strategy: restore_snapshot, reversible: true, tool: restore}
+    verification_probe: {strategy: object_health, expect_healthy: true}
 
   "rights|RGT-EXCL-009|vod_item":
     risk_class: restricted_change
     policy_rule_id: RGT-EXCL-009-TAKEDOWN
     ladder_ceiling: L1             # rights-ops human approval only; never auto (restricted)
     action_type: rights_takedown
+    required_approver_role: rights-ops
     lineage_refs: ["kb:KB-0004", "jira:MEDIA-113"]
+    inverse: {strategy: restore_snapshot, reversible: true, tool: restore}
+    verification_probe: {strategy: object_health, expect_healthy: true}
 
   "scheduler|SCH-DST-118|schedule_item":
     risk_class: standard_change
     policy_rule_id: SCH-DST-118-OFFSET
     ladder_ceiling: L2
     action_type: dedupe_slot
+    required_approver_role: scheduling-ops
     lineage_refs: ["kb:KB-0001"]
+    inverse: {strategy: restore_snapshot, reversible: true, tool: restore}
+    verification_probe: {strategy: object_health, expect_healthy: true}
 
   "scheduler|SCH-OVL-204|schedule_item":
     risk_class: standard_change
     policy_rule_id: SCH-OVL-204-DEDUPE
     ladder_ceiling: L2
     action_type: dedupe_slot
+    required_approver_role: scheduling-ops
     lineage_refs: ["kb:KB-0001"]
+    inverse: {strategy: restore_snapshot, reversible: true, tool: restore}
+    verification_probe: {strategy: object_health, expect_healthy: true}
 
   "rights|RGT-WIN-014|vod_item":
     risk_class: restricted_change
     policy_rule_id: RGT-WIN-014-TAKEDOWN
     ladder_ceiling: L1
     action_type: rights_takedown
+    required_approver_role: rights-ops
     lineage_refs: ["kb:KB-0004"]
+    inverse: {strategy: restore_snapshot, reversible: true, tool: restore}
+    verification_probe: {strategy: object_health, expect_healthy: true}
 
   "endpoint|EPT-BOOT-291|endpoint_host":
     risk_class: standard_change
@@ -71,11 +92,16 @@ classes:
     action_type: none
     lineage_refs: ["kb:KB-0001"]
 
+  # `publish_job` is NOT a sim-executable object type — the sim has no `publish_job` table, so
+  # snapshot / verify / restore cannot round-trip it and NO true inverse can be exercised. An
+  # executable class here would be claiming a rollback the sim cannot actually perform, so this
+  # class is NON-EXECUTABLE (action_type none) and degrades to L1 human approval (KB-0007
+  # documents the manual requeue). This is the fail-closed choice, not a missing feature.
   "publisher|PUB-JOB-503|publish_job":
     risk_class: standard_change
-    policy_rule_id: PUB-JOB-503-REQUEUE
-    ladder_ceiling: L2
-    action_type: republish_epg
+    policy_rule_id: PUB-JOB-503-REQUEUE-L1
+    ladder_ceiling: L1
+    action_type: none
     lineage_refs: ["kb:KB-0001"]
 
   # Escalate-class: no safe admin fix (KB-0010) — routes to a human, never executes.

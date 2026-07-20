@@ -1,0 +1,71 @@
+# Deliberately-broken pack fixture — EVERY executable class here MUST be rejected by
+# `precedent policy lint`. Used by tests/test_policy_kit.py to prove the lint's messages.
+# DO NOT "fix" these — they are the negative test corpus.
+#
+# Irreversibility is enforced POSITIVELY (no action-name denylist): an irreversible action is
+# rejected because it cannot name an inverse tool that EXISTS in the typed-tool registry and
+# genuinely rolls back — so its inverse is absent, non-reversible, or an invented tool name.
+version: 1
+
+classes:
+  # NO_TRUE_INVERSE — credential rotation names a plausible-looking but NON-EXISTENT inverse
+  # tool. You cannot un-rotate a live credential, so no real rollback tool exists; the invented
+  # `tool` does not resolve in the registry and the class is rejected (§2.5) — regardless of
+  # the action name.
+  "auth|SEC-ROT-001|credential":
+    risk_class: restricted_change
+    policy_rule_id: SEC-ROT-001-ROTATE
+    ladder_ceiling: L1
+    action_type: rotate_credential
+    required_approver_role: security-ops
+    inverse: {strategy: restore_snapshot, reversible: true, tool: unrotate_credential}
+    verification_probe: {strategy: object_health, expect_healthy: true}
+
+  # NO_TRUE_INVERSE — password reset declares a non-reversible / no-op inverse (§2.5).
+  "auth|SEC-PWD-002|user_account":
+    risk_class: restricted_change
+    policy_rule_id: SEC-PWD-002-RESET
+    ladder_ceiling: L1
+    action_type: password_reset
+    required_approver_role: security-ops
+    inverse: {strategy: none, reversible: false}
+    verification_probe: {strategy: object_health, expect_healthy: true}
+
+  # NO_TRUE_INVERSE — an ARBITRARY irreversible synonym (not on any denylist) with an invented
+  # inverse tool. Proves the positive check catches irreversible actions by ANY name.
+  "storage|STG-WIPE-006|datastore":
+    risk_class: restricted_change
+    policy_rule_id: STG-WIPE-006-WIPE
+    ladder_ceiling: L1
+    action_type: wipe_datastore
+    required_approver_role: storage-ops
+    inverse: {strategy: restore_snapshot, reversible: true, tool: undelete_everything}
+    verification_probe: {strategy: object_health, expect_healthy: true}
+
+  # MISSING_INVERSE — executable but declares no rollback at all.
+  "publisher|PUB-NOINV-003|schedule_item":
+    risk_class: standard_change
+    policy_rule_id: PUB-NOINV-003
+    ladder_ceiling: L2
+    action_type: republish_epg
+    required_approver_role: publishing-ops
+    verification_probe: {strategy: object_health, expect_healthy: true}
+
+  # NO_TRUE_INVERSE — declares an inverse that is not reversible.
+  "scheduler|SCH-FAKE-004|schedule_item":
+    risk_class: standard_change
+    policy_rule_id: SCH-FAKE-004
+    ladder_ceiling: L2
+    action_type: dedupe_slot
+    required_approver_role: scheduling-ops
+    inverse: {strategy: none, reversible: false}
+    verification_probe: {strategy: object_health, expect_healthy: true}
+
+  # MISSING_PROBE — executable, real inverse, but no verification probe.
+  "publisher|PUB-NOPROBE-005|schedule_item":
+    risk_class: standard_change
+    policy_rule_id: PUB-NOPROBE-005
+    ladder_ceiling: L2
+    action_type: republish_epg
+    required_approver_role: publishing-ops
+    inverse: {strategy: restore_snapshot, reversible: true, tool: restore}

@@ -105,11 +105,25 @@ open http://localhost:8000   # "The Approver's Seat": you take the approver's ch
                              # and drive the real kernel through 8 self-paced chapters
 
 # Prove the claims yourself
-make test                    # 256 tests, 0 skipped, ~20 s
+make test                    # the full suite, 0 skipped
 make check-open-weight       # model names appear only in precedent/models.py
+make copy-lint               # every rendered number carries its docs/numbers.md label
+make policy-lint             # no executable action class without a true inverse + probe
+make evidence-pack           # emit + offline-verify a per-incident evidence pack
 make bench                   # regenerate the conformance bench RESULTS.md
-make freeze-check            # the full release gate
+make freeze-check            # the full release gate (chains all of the above)
 ```
+
+The **Gate API** is the product spine: `POST /v1/gate/propose` → `GET /v1/gate/decision/{ref}`
+→ `POST /v1/gate/outcome` (deny / needs-approval / allow-standing), computed only by the
+deterministic policy engine + ladder — no LLM in the decision path (a CI test proves 0 model
+calls across a full cycle). The console consumes this same versioned API over HTTP.
+
+**Analyze your own data (local-only):** `precedent-analyze <export.csv>` reads a ServiceNow /
+Jira / generic incident export, computes your org's fix-class match rate (existence),
+symptom-class match rate (arrival-knowable) and standing-approval candidate classes, and writes
+a self-contained HTML report — with the existence-vs-arrival / calendar / naive-floor caveats
+printed on it. Data never leaves the machine (opens no sockets; a sockets-disabled test enforces it).
 
 **Airplane-mode by design:** with no API keys the demo uses canned model fallbacks,
 committed embeddings, and a local Jira-shaped ACL source — every beat still works,
@@ -118,9 +132,19 @@ including the permission flip and the rollback. With keys, triage runs live on V
 
 **Host it:** the repo ships a one-container image (sim + console, no secrets baked in).
 `docker build -t precedent-demo . && docker run -p 8000:8000 precedent-demo`, or deploy
-straight to Render via [`render.yaml`](render.yaml). Known limitation: the demo state is
-currently single-session — concurrent visitors share it (session isolation is the top
-item on the roadmap below).
+straight to Render via [`render.yaml`](render.yaml). Every visitor gets an isolated
+session world — a private memory database and a private sim world (both derived from a
+committed cold-open, evicted on a TTL) — so concurrent visitors never touch each other's
+state.
+
+**Evidence packs:** every incident yields a per-incident Evidence Pack (`make evidence-pack`)
+— a self-authenticating JSON + self-contained HTML bundle carrying the incident, retrieved
+precedent + provenance, the deterministic gate decision + policy-pack version, the named human
+principal(s), the typed execution transcript, verification + rollback record, and a chain proof
+(the full hash chain recomputable from GENESIS + expected-length / tail-hash anchors that catch
+tail truncation). Verify any pack offline with `python verify_pack.py <pack>.json` — stdlib
+only, no network, no secret key; it exits non-zero on any tampered byte. Every pack states it
+is evidence support, not a compliance determination.
 
 **Agents:** the Watcher / Librarian / Operator run as Fetch.ai Agentverse mailbox agents
 speaking the Chat Protocol; an incident can be reported, approved and resolved entirely
@@ -131,8 +155,11 @@ principal ([proofs](docs/evidence/LIVE-PROOFS.md)).
 
 | Path | What it is |
 |---|---|
-| [`precedent/`](precedent/) | Core loop: typed contracts, deterministic extractor + fingerprint, YAML policy engine, approval ladder + standing-approval fast-path, orchestrator, model registry |
+| [`precedent/`](precedent/) | Core loop: typed contracts, deterministic extractor + fingerprint, YAML policy engine, approval ladder + standing-approval fast-path, orchestrator, model registry, policy authoring kit (`precedent policy lint`) |
+| [`gate/`](gate/) | The Gate API — versioned `/v1/gate/*` HTTP surface; deny / needs-approval / allow-standing from the deterministic engine only, fail-closed, no LLM in the decision path |
 | [`precedent_memory/`](precedent_memory/) | Permission-aware memory library: lineage-conjunction ACLs, precompiled policy bitmaps, hash-chained audit, fail-closed retrieval, conformance bench + oracle |
+| [`precedent_pack/`](precedent_pack/) · [`verify_pack.py`](verify_pack.py) | Evidence Pack v1 builder + a stdlib-only offline verifier |
+| [`precedent_analyzer/`](precedent_analyzer/) | Local `precedent-analyze` CLI — your org's own repeat-rate + candidate classes, data never leaves the machine |
 | [`sim/`](sim/) | MediaCo simulated broadcast stack (scheduler / rights / publisher / KB) seeded with real public data — real content, simulated services, messiness preserved |
 | [`console/`](console/) | Server-rendered demo — "The Approver's Seat" interactive chaptered tour |
 | [`agents/`](agents/) | Fetch.ai rails: Watcher / Librarian / Operator mailbox agents |

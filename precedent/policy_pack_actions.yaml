@@ -1,0 +1,192 @@
+# Precedent ACTION-CLASS pack — the authoring-kit surface (WP-POLICY).
+#
+# This pack SPLITS OUT sim-executable action classes from the core policy_pack.yaml so the
+# `precedent policy lint` CLI can enforce the authoring contract on them: every executable
+# class MUST declare a TRUE inverse (a real rollback) and a verification probe, or it is
+# REJECTED. Schema doc: docs/policy-action-class-schema.md.
+#
+# Seeded from the HEAD of the 558 recurring UCI fix classes (data/analysis/uci-baseline-
+# results.md — 558 classes recur >=4 times, covering 94.8% of volume; both figures are in
+# docs/numbers.md). Each class carries a `precedent_ref` to its anonymised UCI fix class
+# (category|subcategory|closed_code) so the lineage from "real recurring incident" to
+# "sim-executable action class" is explicit. NO per-class occurrence count is asserted: the
+# corpus is anonymised and the individual counts are NOT measured/published in docs/numbers.md,
+# so stating them would present an unverified number as fact. The UCI corpus is anonymised
+# (Category N / Subcategory N / code N); the MediaCo error_code + typed action are the
+# executable mapping onto our sim.
+#
+# RULE 2 still holds: nothing here is chosen by an LLM. The class_key is the deterministic
+# fingerprint; this pack only records the deterministic policy + rollback contract for it.
+version: 1
+
+classes:
+  # 1 — head class: among the most recurrent republish fix classes in the corpus HEAD.
+  "publisher|PUB-EPG-4223|schedule_item":
+    risk_class: standard_change
+    policy_rule_id: PUB-EPG-4223-REPUBLISH
+    ladder_ceiling: L2
+    action_type: republish_epg
+    required_approver_role: publishing-ops
+    lineage_refs: ["kb:KB-0001"]
+    precedent_ref:
+      corpus: UCI-498
+      fix_class: "Category 42|Subcategory 223|code 6"
+    inverse:
+      strategy: restore_snapshot     # pre-state captured before execute; restore reverts it
+      reversible: true
+      tool: restore
+    verification_probe:
+      strategy: object_health         # sim /verify — object must read healthy post-fix
+      expect_healthy: true
+
+  # 2
+  "scheduler|SCH-DUP-2617|schedule_item":
+    risk_class: standard_change
+    policy_rule_id: SCH-DUP-2617-DEDUPE
+    ladder_ceiling: L2
+    action_type: dedupe_slot
+    required_approver_role: scheduling-ops
+    lineage_refs: ["kb:KB-0001"]
+    precedent_ref:
+      corpus: UCI-498
+      fix_class: "Category 26|Subcategory 175|code 6"
+    inverse:
+      strategy: restore_snapshot
+      reversible: true
+      tool: restore
+    verification_probe:
+      strategy: object_health
+      expect_healthy: true
+
+  # 3
+  "publisher|PUB-EPG-5317|schedule_item":
+    risk_class: standard_change
+    policy_rule_id: PUB-EPG-5317-REPUBLISH
+    ladder_ceiling: L2
+    action_type: republish_epg
+    required_approver_role: publishing-ops
+    lineage_refs: ["kb:KB-0001"]
+    precedent_ref:
+      corpus: UCI-498
+      fix_class: "Category 53|Subcategory 174|code 6"
+    inverse:
+      strategy: restore_snapshot
+      reversible: true
+      tool: restore
+    verification_probe:
+      strategy: object_health
+      expect_healthy: true
+
+  # 4
+  "scheduler|SCH-OVL-4227|schedule_item":
+    risk_class: standard_change
+    policy_rule_id: SCH-OVL-4227-DEDUPE
+    ladder_ceiling: L2
+    action_type: dedupe_slot
+    required_approver_role: scheduling-ops
+    lineage_refs: ["kb:KB-0001"]
+    precedent_ref:
+      corpus: UCI-498
+      fix_class: "Category 42|Subcategory 223|code 7"
+    inverse:
+      strategy: restore_snapshot
+      reversible: true
+      tool: restore
+    verification_probe:
+      strategy: object_health
+      expect_healthy: true
+
+  # 5
+  "publisher|PUB-EPG-2617|schedule_item":
+    risk_class: standard_change
+    policy_rule_id: PUB-EPG-2617-REPUBLISH
+    ladder_ceiling: L2
+    action_type: republish_epg
+    required_approver_role: publishing-ops
+    lineage_refs: ["kb:KB-0001"]
+    precedent_ref:
+      corpus: UCI-498
+      fix_class: "Category 26|Subcategory 175|code 7"
+    inverse:
+      strategy: restore_snapshot
+      reversible: true
+      tool: restore
+    verification_probe:
+      strategy: object_health
+      expect_healthy: true
+
+  # 6 — restricted: rights takedown never auto-executes (ceiling L1, rights-ops).
+  "rights|RGT-EXP-3209|vod_item":
+    risk_class: restricted_change
+    policy_rule_id: RGT-EXP-3209-TAKEDOWN
+    ladder_ceiling: L1
+    action_type: rights_takedown
+    required_approver_role: rights-ops
+    lineage_refs: ["kb:KB-0004"]
+    precedent_ref:
+      corpus: UCI-498
+      fix_class: "Category 32|Subcategory 9|code 6"
+    inverse:
+      strategy: restore_snapshot
+      reversible: true
+      tool: restore
+    verification_probe:
+      strategy: object_health
+      expect_healthy: true
+
+  # 7
+  "scheduler|SCH-DUP-5117|schedule_item":
+    risk_class: standard_change
+    policy_rule_id: SCH-DUP-5117-DEDUPE
+    ladder_ceiling: L2
+    action_type: dedupe_slot
+    required_approver_role: scheduling-ops
+    lineage_refs: ["kb:KB-0001"]
+    precedent_ref:
+      corpus: UCI-498
+      fix_class: "Category 51|Subcategory 174|code 6"
+    inverse:
+      strategy: restore_snapshot
+      reversible: true
+      tool: restore
+    verification_probe:
+      strategy: object_health
+      expect_healthy: true
+
+  # 8
+  "publisher|PUB-EPG-2817|schedule_item":
+    risk_class: standard_change
+    policy_rule_id: PUB-EPG-2817-REPUBLISH
+    ladder_ceiling: L2
+    action_type: republish_epg
+    required_approver_role: publishing-ops
+    lineage_refs: ["kb:KB-0001"]
+    precedent_ref:
+      corpus: UCI-498
+      fix_class: "Category 28|Subcategory 174|code 6"
+    inverse:
+      strategy: restore_snapshot
+      reversible: true
+      tool: restore
+    verification_probe:
+      strategy: object_health
+      expect_healthy: true
+
+  # 9 — restricted rights window takedown.
+  "rights|RGT-WIN-4623|vod_item":
+    risk_class: restricted_change
+    policy_rule_id: RGT-WIN-4623-TAKEDOWN
+    ladder_ceiling: L1
+    action_type: rights_takedown
+    required_approver_role: rights-ops
+    lineage_refs: ["kb:KB-0004"]
+    precedent_ref:
+      corpus: UCI-498
+      fix_class: "Category 46|Subcategory 223|code 6"
+    inverse:
+      strategy: restore_snapshot
+      reversible: true
+      tool: restore
+    verification_probe:
+      strategy: object_health
+      expect_healthy: true

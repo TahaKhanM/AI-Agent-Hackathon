@@ -1,0 +1,15 @@
+Issue key,Issue Type,Summary,Components,Labels,Resolution,Created,Resolved,Assignee
+MEDIA-101,Incident,EPG schedule drift on channel 4,Playout,epg-drift,Fixed,2026-01-05 09:00,2026-01-05 12:00,a.ng
+MEDIA-102,Incident,VOD title missing artwork,Catalogue,artwork-missing,Fixed,2026-01-05 10:30,2026-01-06 10:30,b.ako
+MEDIA-103,Incident,EPG schedule drift on channel 7,Playout,epg-drift,Fixed,2026-01-06 08:15,2026-01-06 14:15,a.ng
+MEDIA-104,Incident,Rights window blocked stream,Rights,window-block,Configuration,2026-01-07 11:00,2026-01-09 11:00,c.roy
+MEDIA-105,Incident,EPG schedule drift on channel 2,Playout,epg-drift,Fixed,2026-01-08 07:45,2026-01-08 09:45,a.ng
+MEDIA-106,Incident,Subtitle asset stale,Catalogue,subtitle-stale,Fixed,2026-01-09 13:20,2026-01-11 13:20,b.ako
+MEDIA-107,Incident,EPG schedule drift on channel 9,Playout,epg-drift,Fixed,2026-01-10 06:30,2026-01-10 12:30,a.ng
+MEDIA-108,Incident,VOD title missing artwork batch,Catalogue,artwork-missing,Fixed,2026-01-11 09:10,2026-01-12 09:10,b.ako
+MEDIA-109,Incident,Rights window blocked stream EU,Rights,window-block,Configuration,2026-01-12 15:00,2026-01-14 15:00,c.roy
+MEDIA-110,Incident,EPG schedule drift on channel 11,Playout,epg-drift,Fixed,2026-01-13 08:00,2026-01-13 11:00,a.ng
+MEDIA-111,Incident,Auth capacity exceeded,Auth,capacity,Escalated,2026-01-14 22:00,,d.fox
+MEDIA-112,Incident,VOD title missing artwork retry,Catalogue,artwork-missing,Fixed,2026-01-15 10:00,2026-01-15 18:00,b.ako
+MEDIA-113,Incident,Endpoint boot loop,Endpoint,boot-loop,Fixed,2026-01-16 03:00,2026-01-16 05:00,d.fox
+MEDIA-114,Incident,Garbled ticket with no clear class,,,, 2026-01-17 09:00,2026-01-17 10:00,e.lee
