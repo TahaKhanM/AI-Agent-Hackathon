@@ -17,6 +17,7 @@ dependencies = [
     "httpx>=0.27",            # Venice / Jira / ASI:One clients
     "python-dotenv>=1.0",     # load .env locally
     "sse-starlette>=2.1",     # console trace streaming
+    "jinja2>=3.1",            # Jinja2 (rendering) — WP-REFACTOR
     "pandas>=2.2",            # UCI ingest + bench
     "numpy>=1.26",            # bitmap / vector ops
     "pyyaml>=6.0",            # YAML policy pack (precedent/policy.py) + KB front-matter

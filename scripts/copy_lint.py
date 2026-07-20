@@ -36,8 +36,8 @@ SURFACES: list[str] = [
     "README.md",
     "console/app.py",
     "console/showcase.py",
-    "templates/**/*.html",
-    "static/**/*.{css,js}",
+    "console/templates/**/*.html",
+    "console/static/**/*.{css,js}",
     "docs/demo/**/*.md",
 ]
 

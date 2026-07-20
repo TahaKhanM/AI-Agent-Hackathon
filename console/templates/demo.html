@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Precedent — The Approver's Seat</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/precedent.css">
+</head>
+<body><div class="wrap">
+<header>
+  <span class="mark"><img src="/static/precedent-seal.png" alt="Precedent seal"></span>
+  <div class="wm"><span class="name">PRECEDENT</span>
+    <span class="tag">Every incident resolved becomes precedent.</span></div>
+  <div class="chips">
+    <span class="chip ok" id="chip-kernel" title="A fingerprint of the decision-making code, pinned in a signed file the running program cannot fake. If a rule changed, this changes.">kernel <b id="kh">…</b></span>
+    <span class="chip" id="chip-model" title="Real calls to an AI model this session. The decisions make none — watch it stay at zero.">AI calls: <b id="mc">0</b></span>
+    <span class="chip" id="chip-seat">the seat is open</span>
+  </div>
+</header>
+<div class="rule"></div>
+
+<main id="main" class="intro">
+  <section class="stage" id="stage">
+    <div id="stage-inner"></div>
+  </section>
+  <aside class="rail">
+    <div class="panel world">
+      <h3>Tonight's board <span class="badge flag" id="world-flag">on air</span></h3>
+      <div id="world"></div>
+    </div>
+    <div class="panel">
+      <h3>The logbook <span class="chainpill ok" id="chainpill">sealed · intact</span></h3>
+      <div class="ledger" id="ledger"></div>
+    </div>
+    <div class="panel">
+      <h3>Precedent set</h3>
+      <div class="docket" id="scoreboard"></div>
+    </div>
+  </aside>
+</main>
+
+<div class="nav">
+  <button class="ghost" data-act="back" id="nav-back">◂ Back</button>
+  <div class="idx" id="idx"></div>
+  <div class="lbl" id="stepno"></div>
+  <button data-act="next" id="nav-next">Begin ▸</button>
+</div>
+</div>
+<script src="/static/js/demo.js"></script>
+</body></html>

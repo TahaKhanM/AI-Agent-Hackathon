@@ -14,6 +14,15 @@ from console.app import app
 RESTRICTED_FIX_TEXT = "takedown + republish per rights runbook"
 
 
+def served_surface(client) -> str:
+    """The user-visible demo surface. Post WP-REFACTOR the page shell links an external
+    JS bundle (console/static/js/demo.js) that carries the narrative copy, so a copy
+    assertion must look at the shell AND the bundle it ships."""
+    html = client.get("/").text
+    js = client.get("/static/js/demo.js").text
+    return html + "\n" + js
+
+
 @pytest.fixture
 def client():
     c = TestClient(app)
@@ -34,8 +43,9 @@ def test_index_loads_and_never_says_autonomous(client):
     r = client.get("/")
     assert r.status_code == 200
     assert "Precedent" in r.text
-    assert "Standing Approval" in r.text
-    assert "Autonomous" not in r.text and "autonomous" not in r.text
+    surface = served_surface(client)
+    assert "Standing Approval" in surface
+    assert "Autonomous" not in surface and "autonomous" not in surface
 
 
 def test_approve_records_audit_event(client):
@@ -55,8 +65,8 @@ def test_promote_stores_canonical_standing_displays_label(client):
     inc = {i["class_key"]: i for i in state["incidents"]}[cls]
     assert inc["ladder_level"] == "STANDING"          # API exposes the canonical token
     assert inc["ladder_level_label"] == "Standing Approval"
-    page = client.get("/").text
-    assert "Standing Approval" in page and "Autonomous" not in page
+    surface = served_surface(client)
+    assert "Standing Approval" in surface and "Autonomous" not in surface
 
     r2 = client.post("/api/revoke", json={"class_key": cls}).json()
     assert r2["level"] == "L1"
@@ -112,8 +122,8 @@ def test_live_timer_moves(monkeypatch):
 
 
 def test_baseline_caveat_visible_on_screen(client):
-    page = client.get("/").text
-    assert "MetricNet" in page and "business-hours" in page and "8h 51m" in page
+    surface = served_surface(client)
+    assert "MetricNet" in surface and "business-hours" in surface and "8h 51m" in surface
 
 
 def test_permission_flip_makes_restricted_memory_go_dark(client):

@@ -127,9 +127,13 @@ def test_state_carries_committed_chip_numbers(demo):
 def test_page_has_no_inline_onclick_xss(demo):
     _ds, _console, client = demo
     page = client.get("/").text
-    assert "onclick" not in page, "inline onclick handlers are the XSS vector — must be gone"
-    assert "data-act" in page                    # controls are delegated off data-* attributes
-    assert "Standing Approval" in page and "autonomous" not in page.lower()
+    # Post WP-REFACTOR the behaviour lives in an external classic bundle; the XSS and
+    # terminology guarantees must hold across the shell AND the bundle it ships.
+    js = client.get("/static/js/demo.js").text
+    surface = page + "\n" + js
+    assert "onclick" not in surface, "inline onclick handlers are the XSS vector — must be gone"
+    assert "data-act" in surface                  # controls are delegated off data-* attributes
+    assert "Standing Approval" in surface and "autonomous" not in surface.lower()
 
 
 def test_change_record_export_from_audit(demo):
