@@ -75,6 +75,24 @@ class _LegacySession:
         return STATE.reset()
 
 
+def _principal_guard(sess, principal: str | None):
+    """Fail-closed identity guard mirroring /api/ladder/* + /v1/gate/* (finding 2). Resolve the
+    EFFECTIVE principal (the caller-named one, else this session's registered default identity) and
+    REJECT it with a 403 non-action when it is not registered OUT-OF-BAND. Returns a JSONResponse to
+    short-circuit the route on rejection (NO audit row is written), or None to proceed.
+
+    Every state-changing console route whose body NAMES a principal calls this before it writes —
+    so a forged, self-asserted principal can never author an audit/ladder row under a real identity,
+    exactly as the hardened ladder + gate routes already enforce."""
+    effective = principal or sess.state.principal
+    if effective not in DEFAULT_PRINCIPALS:
+        return JSONResponse(
+            {"ok": False, "reason": "unregistered_principal",
+             "detail": "principal is not registered out-of-band"},
+            status_code=403)
+    return None
+
+
 def _session(request: Request | None = None):
     """Resolve the world for THIS request: the pinned world in test mode, else the per-cookie
     session (created fresh + cold-open on first hit / after eviction — fail-closed).
@@ -150,6 +168,17 @@ async def _session_and_rate_limit(request: Request, call_next):
         return await call_next(request)
 
     sid = request.cookies.get(sessionmod.COOKIE_NAME)
+    # Finding 1: gate SESSION CREATION on the cookieless / new-session path BEFORE minting. A
+    # caller that does not persist its cookie would otherwise mint a fresh session (+ a fresh
+    # request bucket) every request — bypassing the per-session limit and flooding world creation.
+    # Over the creation rate ⇒ 429, NO session minted (fail-closed). A live cookie is never charged.
+    if not sessionmod.SESSIONS.has_live(sid):
+        client_key = request.client.host if request.client else None
+        if not sessionmod.allow_session_creation(client_key):
+            return JSONResponse(
+                {"error": "rate_limited", "detail": "Too many new sessions — slow down."},
+                status_code=429,
+            )
     session = sessionmod.SESSIONS.resolve(sid)
     request.state.session = session
 
@@ -390,7 +419,11 @@ def api_probes_run(request: Request, n: int = 100):
 
 @app.post("/api/approve")
 def api_approve(req: ApproveReq, request: Request):
-    return _session(request).state.approve(req.incident_id, req.principal)
+    sess = _session(request)
+    guard = _principal_guard(sess, req.principal)   # forged principal ⇒ 403, no audit row
+    if guard is not None:
+        return guard
+    return sess.state.approve(req.incident_id, req.principal)
 
 
 @app.post("/api/recur")
@@ -399,19 +432,31 @@ def api_recur(req: LadderReq, request: Request):
     distinct seeded target through the REAL ladder (ladder.on_verification_result). The 3rd
     distinct recurrence lifts the class to the eligibility threshold so ladder.eligible() lights
     the visitor's Promote button. No LLM, no raw upsert."""
-    return _session(request).state.record_recurrence(req.class_key or None)
+    sess = _session(request)
+    guard = _principal_guard(sess, req.principal)
+    if guard is not None:
+        return guard
+    return sess.state.record_recurrence(req.class_key or None)
 
 
 @app.post("/api/promote")
 def api_promote(req: LadderReq, request: Request):
     # WP-CONSOLE med + WP-DEMO §b: routed through ladder.promote(force=False) inside state.promote —
     # the raw STANDING upsert bypass is deleted; not-eligible is a fail-closed non-action.
-    return _session(request).state.promote(req.class_key, req.principal)
+    sess = _session(request)
+    guard = _principal_guard(sess, req.principal)
+    if guard is not None:
+        return guard
+    return sess.state.promote(req.class_key, req.principal)
 
 
 @app.post("/api/revoke")
 def api_revoke(req: LadderReq, request: Request):
-    return _session(request).state.revoke(req.class_key, req.principal)
+    sess = _session(request)
+    guard = _principal_guard(sess, req.principal)
+    if guard is not None:
+        return guard
+    return sess.state.revoke(req.class_key, req.principal)
 
 
 @app.post("/api/permission-flip")

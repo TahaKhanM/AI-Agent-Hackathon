@@ -62,3 +62,6 @@ data/cache/
 *.sqlite
 *.sqlite-*
 data/raw/incident_event_log.csv
+
+# Session scratchpad — throwaway probe/working scripts, never shipped
+/scratchpad/

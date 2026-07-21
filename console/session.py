@@ -87,20 +87,24 @@ def configure_rate_limit(capacity: float, refill_per_s: float) -> None:
 
 
 class TokenBucket:
-    """A single monotonic-clock token bucket. ``allow()`` costs one token; empty => False."""
+    """A single monotonic-clock token bucket. ``allow()`` costs one token; empty => False.
 
-    def __init__(self) -> None:
+    ``capacity_fn``/``refill_fn`` are read LIVE on every ``allow()`` so a test monkeypatch or a
+    ``configure_*`` call takes effect immediately (default: the per-session request knobs)."""
+
+    def __init__(self, capacity_fn=None, refill_fn=None) -> None:
         self._lock = threading.Lock()
-        self._tokens = _RATE_CAPACITY
+        self._capacity_fn = capacity_fn or (lambda: _RATE_CAPACITY)
+        self._refill_fn = refill_fn or (lambda: _RATE_REFILL_PER_S)
+        self._tokens = self._capacity_fn()
         self._last = time.monotonic()
 
     def allow(self, cost: float = 1.0) -> bool:
         with self._lock:
+            cap = self._capacity_fn()
             now = time.monotonic()
             # Refill using the CURRENT (possibly reconfigured) rate, capped at capacity.
-            self._tokens = min(
-                _RATE_CAPACITY, self._tokens + (now - self._last) * _RATE_REFILL_PER_S
-            )
+            self._tokens = min(cap, self._tokens + (now - self._last) * self._refill_fn())
             self._last = now
             if self._tokens >= cost:
                 self._tokens -= cost
@@ -109,8 +113,72 @@ class TokenBucket:
 
     def reset(self) -> None:
         with self._lock:
-            self._tokens = _RATE_CAPACITY
+            self._tokens = self._capacity_fn()
             self._last = time.monotonic()
+
+
+# --------------------------------------------------------------------------- #
+# Session-CREATION rate limit (finding 1 — the cookieless fail-open)
+# --------------------------------------------------------------------------- #
+# The per-session request bucket above only bites a caller that PERSISTS its precedent_sid cookie.
+# A caller that drops the cookie mints a FRESH session — and a FRESH full request bucket — on EVERY
+# request, bypassing the per-session limit and flooding session/world CREATION (each mint copies two
+# sqlite dbs + opens two connections => an FD/disk-exhaustion DoS the MAX_SESSIONS LRU cap only
+# bounds the STEADY-STATE of, never the churn rate). So creation itself is rate-limited BEFORE a new
+# session is minted, keyed by CLIENT (request.client.host). Over-limit ⇒ 429, NO session minted
+# (fail-closed / non-action). Keyed PER-CLIENT (not one global bucket) so a single abuser's flood is
+# throttled WITHOUT one shared bucket coupling — and falsely throttling — distinct legitimate
+# visitors. The MAX_SESSIONS LRU cap stays as the disk/FD backstop for a distributed multi-IP spray.
+# Defaults are generous (mirroring the per-session request bucket) so a real visitor — who mints
+# exactly ONE session and then rides its cookie — and the whole test suite never trip it; only a
+# deliberate cookieless flood from a single client does. The barrier test shrinks these to force it.
+_CREATION_CAPACITY = float(os.environ.get("PRECEDENT_CREATE_CAPACITY", "240"))
+_CREATION_REFILL_PER_S = float(os.environ.get("PRECEDENT_CREATE_REFILL_PER_S", "120"))
+# Bound the per-client bucket MAP itself so a spray of distinct client keys can't grow it without
+# limit (a second-order DoS). Oldest-touched keys are dropped (they refill to full when re-seen).
+_CREATION_BUCKETS_MAX = 4096
+
+_CREATION_LOCK = threading.Lock()
+_CREATION_BUCKETS: dict[str, TokenBucket] = {}
+
+
+def _creation_capacity() -> float:
+    return _CREATION_CAPACITY
+
+
+def _creation_refill() -> float:
+    return _CREATION_REFILL_PER_S
+
+
+def configure_creation_limit(capacity: float, refill_per_s: float) -> None:
+    """Reset the session-CREATION token-bucket parameters (used by the barrier test; restore
+    after). Read live by every creation bucket, so this takes effect immediately."""
+    global _CREATION_CAPACITY, _CREATION_REFILL_PER_S
+    _CREATION_CAPACITY = float(capacity)
+    _CREATION_REFILL_PER_S = float(refill_per_s)
+
+
+def reset_creation_state() -> None:
+    """Forget every per-client creation bucket — so a test starts from a clean creation-rate state
+    (no drained/over-sized bucket leaking across tests)."""
+    with _CREATION_LOCK:
+        _CREATION_BUCKETS.clear()
+
+
+def allow_session_creation(client_key: str | None) -> bool:
+    """True iff a NEW session may be minted for this client right now. Fail-closed: over the
+    per-client creation rate ⇒ False (the caller must NOT mint, and returns 429)."""
+    key = client_key or "-"
+    with _CREATION_LOCK:
+        bucket = _CREATION_BUCKETS.get(key)
+        if bucket is None:
+            if len(_CREATION_BUCKETS) >= _CREATION_BUCKETS_MAX:
+                # Drop an arbitrary existing key (it refills to full if the client returns) so the
+                # map can never grow past its bound — the map itself is not a memory DoS vector.
+                _CREATION_BUCKETS.pop(next(iter(_CREATION_BUCKETS)), None)
+            bucket = TokenBucket(_creation_capacity, _creation_refill)
+            _CREATION_BUCKETS[key] = bucket
+    return bucket.allow()
 
 
 # --------------------------------------------------------------------------- #
@@ -343,6 +411,12 @@ class Session:
         self.tamper_backup.clear()
         self.lat_ring.clear()
         self.model_counter.reset()   # a fresh cold-open starts THIS session's tally back at 0
+        # Finding 4: the gate pending-decision refs (and the standing exactly-once ledger) are
+        # stashed on the DemoState (gate/world.gate_world_from_session). reset() swaps in a fresh
+        # conn but leaves those, so a ref proposed before the cold-open restart would SURVIVE and
+        # stay executable. Drop them here so a pre-reset ref becomes a non-action (fail-closed).
+        self.state.__dict__.pop("_gate_refs", None)
+        self.state.__dict__.pop("_gate_executed", None)
         self.reset_sim()
         return snap
 
@@ -358,17 +432,23 @@ class Session:
         """Close the memory sqlite connection, then the per-session sim TestClient, then DELETE
         every per-session file. Fail-closed and idempotent: each resource is torn down in its OWN
         guarded step so one failure never leaves a later resource (or an FD) silently live."""
-        # 1) Memory sqlite connection — its OWN step. Best-effort lock (a lock hiccup must NOT
-        #    block the close), then conn.close() in a `finally` so it ALWAYS runs. Catch only the
-        #    sqlite error close can raise — an unexpected failure is surfaced, not swallowed.
+        # 1) Memory sqlite connection — its OWN step. Acquire the world lock (bounded) BEFORE
+        #    closing the conn, and close ONLY when we hold it. Finding 5: if an in-flight op (a
+        #    gate outcome) still holds the lock after the bounded wait, we must NOT yank the conn
+        #    out from under it — that mid-op close is the crash. So a still-held lock ⇒ we leave the
+        #    conn live (the op finishes coherently; the already-unlinked file GCs with its fd). The
+        #    LRU cap-eviction additionally SKIPS in-flight sessions, so this timeout is the rare
+        #    belt-and-braces path. Catch only the sqlite error a close is expected to raise.
         lock = getattr(self.state, "_lock", None)
-        got_lock = lock.acquire(timeout=1.0) if lock is not None else False
+        got_lock = True if lock is None else lock.acquire(timeout=1.0)
         try:
-            self.state.conn.close()  # idempotent; the reliably-closed FD (finding 4)
-        except sqlite3.Error:  # narrow: the only error a sqlite close is expected to raise
-            pass
-        finally:
             if got_lock:
+                try:
+                    self.state.conn.close()  # idempotent; the reliably-closed FD
+                except sqlite3.Error:  # narrow: the only error a sqlite close is expected to raise
+                    pass
+        finally:
+            if got_lock and lock is not None:
                 lock.release()
         # 2) Sim TestClient / app — its OWN guarded step.
         with self._sim_lock:
@@ -426,6 +506,17 @@ class SessionStore:
         with self._lock:
             return self._sessions.get(sid)
 
+    def has_live(self, sid: str | None, now: float | None = None) -> bool:
+        """True iff ``sid`` names a live, non-expired session — i.e. a request on this cookie would
+        REUSE a world rather than MINT one. The creation-rate gate uses this to charge only the
+        cookieless / new-session path, never a well-behaved cookie-persisting visitor."""
+        if not sid:
+            return False
+        now = time.monotonic() if now is None else now
+        with self._lock:
+            sess = self._sessions.get(sid)
+            return sess is not None and not sess.is_expired(self.ttl, now)
+
     def __len__(self) -> int:
         with self._lock:
             return len(self._sessions)
@@ -438,13 +529,32 @@ class SessionStore:
         sess.close()
         return True
 
+    @staticmethod
+    def _lock_is_free(sess: Session) -> bool:
+        """True iff ``sess``'s world lock is NOT currently held by another thread. Non-blocking:
+        a successful trylock is released immediately. Used to keep cap-eviction off an in-flight
+        session (finding 5)."""
+        lock = getattr(sess.state, "_lock", None)
+        if lock is None:
+            return True
+        if lock.acquire(blocking=False):
+            lock.release()
+            return True
+        return False
+
     def _evict_oldest_locked(self) -> bool:
-        """Evict the single LRU session (oldest ``last_seen``). Returns False when empty.
-        Caller MUST hold ``self._lock``. Used by the MAX_SESSIONS creation cap."""
-        if not self._sessions:
-            return False
-        oldest = min(self._sessions, key=lambda s: self._sessions[s].last_seen)
-        return self._evict_locked(oldest)
+        """Evict the stalest (oldest ``last_seen``) session whose world lock is NOT currently held.
+        Returns False when empty OR when every live session is in-flight. Caller MUST hold
+        ``self._lock``. Used by the MAX_SESSIONS creation cap.
+
+        Finding 5: force-closing a session whose lock a gate outcome is holding would yank its conn
+        mid-op (closed-conn crash). So an in-flight session is SKIPPED — we shed the next-stalest
+        idle world instead. If ALL live sessions are busy, we decline to evict (a brief, bounded
+        cap overflow, capped by concurrency) rather than evict an in-flight world."""
+        for sid in sorted(self._sessions, key=lambda s: self._sessions[s].last_seen):
+            if self._lock_is_free(self._sessions[sid]):
+                return self._evict_locked(sid)
+        return False
 
     def evict(self, sid: str) -> bool:
         with self._lock:

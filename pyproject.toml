@@ -65,8 +65,10 @@ markers = [
 line-length = 100
 target-version = "py311"
 # data/analysis holds one-off exploratory pandas scripts (committed as evidence);
-# their idioms (e.g. `series == False` for elementwise masks) are intentional.
-extend-exclude = ["data", ".venv"]
+# their idioms (e.g. `series == False` for elementwise masks) are intentional. `scratchpad`
+# is the untracked throwaway working dir (never shipped, never in the CI checkout) — same
+# rationale, so lint it out too and keep the local gate matching CI.
+extend-exclude = ["data", ".venv", "scratchpad"]
 
 [tool.ruff.lint]
 # The open-weight guard: model-name tokens may appear ONLY in precedent/models.py.

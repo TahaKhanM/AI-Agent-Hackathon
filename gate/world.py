@@ -51,6 +51,12 @@ class GateWorld:
     lock: Any = field(default_factory=threading.RLock)
     refs: dict[str, PendingEntry] = field(default_factory=dict)
     principals: frozenset[str] | None = None
+    # Durable-per-world exactly-once ledger for STANDING refs (finding 3). A needs-approval ref is
+    # deduped by the agents.approval ledger; a STANDING ref writes NO ledger row, so two proposes of
+    # the same (incident, plan) could execute TWICE. This set records executed plan keys so the
+    # second standing outcome is a non-action. Persisted across a session's requests the same way
+    # ``refs`` is (see gate_world_from_session), and long-lived for a standalone/test world.
+    executed: set[str] = field(default_factory=set)
     # Optional owned resources so a standalone/test world can be torn down cleanly.
     _state: Any = None
     _client: Any = None
@@ -90,8 +96,11 @@ def gate_world_from_session(session: Any, *, principals: frozenset[str] | None =
     """
     state = session.state
     refs = state.__dict__.setdefault("_gate_refs", {})
+    # The standing exactly-once ledger is stashed alongside refs so it persists across the session's
+    # requests (a per-request GateWorld would otherwise forget it). reset_world() drops both.
+    executed = state.__dict__.setdefault("_gate_executed", set())
     return GateWorld(conn=state.conn, tools=session.sim_tools(), lock=state._lock,
-                     refs=refs, principals=principals)
+                     refs=refs, principals=principals, executed=executed)
 
 
 def build_seeded_world(workdir: Any, *, standing_classes: tuple[str, ...] = (),

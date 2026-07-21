@@ -293,6 +293,21 @@ def report_outcome(world: GateWorld, req: OutcomeRequest) -> OutcomeResponse:
                                        executed=False, plan_hash=entry.plan_hash,
                                        detail="already decided (durable ledger) — non-action")
 
+        # Durable exactly-once for STANDING refs (finding 3). A needs-approval ref is deduped by the
+        # approval ledger above; a STANDING ref writes NO ledger row, so two proposes of the same
+        # (incident, plan) mint two refs that would each execute. The per-world executed-set closes
+        # that: an already-executed standing plan ⇒ non-action + a gate_already_decided audit row.
+        plan_key = f"{entry.incident_id}|{entry.plan_hash}"
+        if entry.kind == "standing" and plan_key in world.executed:
+            entry.status = "approved"
+            entry.prepared = None
+            _audit(world, "gate_already_decided", req.approver_principal,
+                   incident_id=entry.incident_id, plan_hash=entry.plan_hash,
+                   prior="approved", ref=ref)
+            return OutcomeResponse(ref=ref, incident_id=entry.incident_id, outcome="approved",
+                                   executed=False, plan_hash=entry.plan_hash,
+                                   detail="already decided (standing exactly-once) — non-action")
+
         # Resolve the human decision for a needs-approval ref. Standing needs none.
         decision: ApprovalDecision | None = None
         actor = entry.principal
@@ -337,6 +352,8 @@ def report_outcome(world: GateWorld, req: OutcomeRequest) -> OutcomeResponse:
         outcome = res.step_results[0].get("outcome") if res.step_results else "unknown"
         entry.status = "approved" if outcome != "rejected" else "denied"
         entry.prepared = None                         # consumed — no replay
+        world.executed.add(plan_key)                  # exactly-once: a later ref for this plan is a
+        #                                               non-action (STANDING-path guard, finding 3)
         _audit(world, "gate_outcome_recorded", actor, incident_id=entry.incident_id,
                plan_hash=entry.plan_hash, outcome=outcome, verified=res.verified,
                rolled_back=res.rolled_back, ref=ref)
